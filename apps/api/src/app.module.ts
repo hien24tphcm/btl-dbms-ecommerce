@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
@@ -17,5 +18,6 @@ import { DbmsLabModule } from './modules/dbms-lab/dbms-lab.module';
     AdminModule,
     DbmsLabModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule {}
