@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { MssqlService } from '../../database/mssql.service';
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly db: MssqlService) {}
+  constructor(@Inject(MssqlService) private readonly db: MssqlService) {}
 
   async getCategories() {
     const res = await this.db.query(`

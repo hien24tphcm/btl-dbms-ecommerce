@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { MssqlService } from '../../database/mssql.service';
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly db: MssqlService) {}
+  constructor(@Inject(MssqlService) private readonly db: MssqlService) {}
 
   /**
    * FR-11: List all users with seller association

@@ -7,12 +7,13 @@ import {
   Param,
   Query,
   ParseIntPipe,
+  Inject,
 } from '@nestjs/common';
 import { CartOrderService } from './cart-order.service';
 
 @Controller()
 export class CartOrderController {
-  constructor(private readonly cartOrderService: CartOrderService) {}
+  constructor(@Inject(CartOrderService) private readonly cartOrderService: CartOrderService) {}
 
   @Get('cart')
   async getCart(@Query('userId', ParseIntPipe) userId: number) {

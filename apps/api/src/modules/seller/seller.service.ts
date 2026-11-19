@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import * as sql from 'mssql';
 import { MssqlService } from '../../database/mssql.service';
 
 @Injectable()
 export class SellerService {
-  constructor(private readonly db: MssqlService) {}
+  constructor(@Inject(MssqlService) private readonly db: MssqlService) {}
 
   /**
    * FR-07 & FR-08: List all products of a Seller with low-stock indicator

@@ -1,9 +1,9 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { MssqlService } from '../../database/mssql.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly db: MssqlService) {}
+  constructor(@Inject(MssqlService) private readonly db: MssqlService) {}
 
   async listDemoAccounts() {
     const res = await this.db.query(`

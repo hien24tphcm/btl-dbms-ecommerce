@@ -8,12 +8,13 @@ import {
   Param,
   Query,
   ParseIntPipe,
+  Inject,
 } from '@nestjs/common';
 import { SellerService } from './seller.service';
 
 @Controller('seller')
 export class SellerController {
-  constructor(private readonly sellerService: SellerService) {}
+  constructor(@Inject(SellerService) private readonly sellerService: SellerService) {}
 
   @Get('products')
   async getSellerProducts(

@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import * as sql from 'mssql';
 import { MssqlService } from '../../database/mssql.service';
 
 @Injectable()
 export class CartOrderService {
-  constructor(private readonly db: MssqlService) {}
+  constructor(@Inject(MssqlService) private readonly db: MssqlService) {}
 
   /**
    * FR-03: Retrieve cart items for a user grouped by seller
