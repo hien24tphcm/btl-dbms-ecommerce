@@ -1,0 +1,85 @@
+services:
+  # ============================================================================
+  # Microsoft SQL Server 2022 Database Engine
+  # ============================================================================
+  mssql:
+    build:
+      context: ./src/mssql
+      dockerfile: Dockerfile
+    image: ecommerce_mssql:2022
+    container_name: ecommerce_mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:-Password_123#}"
+      MSSQL_PID: "Developer"
+    ports:
+      - "${MSSQL_PORT:-1433}:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql/data
+      - mssql_backups:/var/opt/mssql/backup
+      - ./src/mssql/init:/init:ro
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P $${MSSQL_SA_PASSWORD} -C -Q \"SELECT 1\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+  # ============================================================================
+  # MSSQL Automated Initialization & Baseline Seeder
+  # Runs schema, indexes, seed data, and creates initial full database backup
+  # ============================================================================
+  mssql-init:
+    image: ecommerce_mssql:2022
+    container_name: ecommerce_mssql_init
+    depends_on:
+      mssql:
+        condition: service_healthy
+    environment:
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:-Password_123#}"
+    volumes:
+      - ./src/mssql/init:/init:ro
+      - mssql_backups:/var/opt/mssql/backup
+    restart: "no"
+    entrypoint: ["/bin/bash", "-c"]
+    command: >
+      "echo '=== Step 1/4: Applying 01_schema.sql ===' &&
+       /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -i /init/01_schema.sql &&
+       echo '=== Step 2/4: Applying 02_indexes.sql ===' &&
+       /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -d ECommerceDB -i /init/02_indexes.sql &&
+       echo '=== Step 3/4: Applying 03_seed.sql and Baseline Backup ===' &&
+       /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -d ECommerceDB -i /init/03_seed.sql &&
+       echo '=== Step 4/4: Applying 04_procedures_fr.sql ===' &&
+       /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -d ECommerceDB -i /init/04_procedures_fr.sql &&
+       echo '=== MSSQL Database Initialization Completed Successfully ==='"
+
+  # ============================================================================
+  # Neo4j Graph Database (Community Edition 5.x)
+  # Activated on demand using: docker compose --profile neo4j up -d
+  # ============================================================================
+  neo4j:
+    image: neo4j:5-community
+    container_name: ecommerce_neo4j
+    profiles:
+      - neo4j
+    environment:
+      NEO4J_AUTH: "neo4j/${NEO4J_PASSWORD:-Neo4jSecurePass2025!}"
+      NEO4J_PLUGINS: '["apoc"]'
+    ports:
+      - "${NEO4J_HTTP_PORT:-7474}:7474"
+      - "${NEO4J_BOLT_PORT:-7687}:7687"
+    volumes:
+      - neo4j_data:/data
+    restart: unless-stopped
+
+# ==============================================================================
+# Persistent Named Volumes
+# ==============================================================================
+volumes:
+  mssql_data:
+    name: ecommerce_mssql_data
+  mssql_backups:
+    name: ecommerce_mssql_backups
+  neo4j_data:
+    name: ecommerce_neo4j_data

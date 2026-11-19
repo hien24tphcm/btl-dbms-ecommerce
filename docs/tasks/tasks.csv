@@ -1,0 +1,6 @@
+Thành viên,Chủ đề DBMS (SQL vs NoSQL),Chức năng Nghiệp vụ (FR),Dạng truy vấn phụ trách (a–h),Bảng CSDL trọng tâm,Phần Báo cáo phụ trách
+Thành viên 1 (Leader),Chủ đề 1: Data Storage & Schema Design,"FR-02, FR-07 (+ Base App & Auth)","(d) Single condition, (a) Insert, (c) Update","Categories, Products","Chapter 1, Chapter 3 (Mục 1), Chapter 6"
+Thành viên 2,Chủ đề 2: Indexing Techniques,"FR-01, FR-06 (+ Tạo Seed Data lớn)","(e) Composite condition, (h) Aggregate, (a) Insert","Reviews, Products","Chapter 2 (SRS & ERD), Chapter 3 (Mục 2)"
+Thành viên 3,Chủ đề 3: Query Processing & Execution Plan,"FR-10, FR-12","(g) Subquery, (h) Aggregate functions",Views / Pipelines thống kê,"Chapter 2 (Bảng truy vấn a–h), Chapter 3 (Mục 3)"
+Thành viên 4,Chủ đề 4: Transactions & Concurrency Control,"FR-03, FR-04, FR-08","(a) Insert, (b) Delete, (c) Update","Carts, Vouchers, Orders, Order_Details","Chapter 3 (Mục 4), Chapter 4 (Demo App)"
+Thành viên 5 ,Chủ đề 5: Data Backup & Disaster Recovery,"FR-05, FR-09, FR-11","(f) Join (JOIN / $lookup), (c) Update","Users, Sellers, Orders","Chapter 3 (Mục 5), Chapter 5 (Teamwork & Biên bản)"
