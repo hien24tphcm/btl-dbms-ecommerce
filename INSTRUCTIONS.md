@@ -52,13 +52,13 @@ The API will be available at `http://localhost:4000/api` with 6 independent modu
 - `AdminModule` (`/api/admin/users`, `/api/admin/users/:id/moderate`, `/api/admin/sellers`, `/api/admin/sellers/:id/approve`, `/api/admin/analytics`) — **FR-11, FR-12**
 - `DbmsLabModule` (`/api/dbms-lab/introspection`, `/api/dbms-lab/integrity-check`) — **Topics 1–5 Introspection & Live `DBCC CHECKDB`**
 
-### Step 2: Start Next.js App Router Frontend (`apps/web` — Port 3000)
+### Step 2: Start Next.js App Router Frontend (`apps/web` — Port 3005)
 ```powershell
 cd apps/web
 npm install
 npm run dev
 ```
-Open `http://localhost:3000` in your browser. Use the **Active Account Switcher** in the top navigation bar to switch immediately between any of the 14 seeded accounts (`buyer_alex`, `seller_techzone`, `admin_root`, etc.).
+Open `http://localhost:3005` in your browser. Use the **Active Account Switcher** in the top navigation bar to switch immediately between any of the 14 seeded accounts (`buyer_alex`, `seller_techzone`, `admin_root`, etc.).
 
 ---
 

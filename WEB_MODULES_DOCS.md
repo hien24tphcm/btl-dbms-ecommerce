@@ -3,7 +3,7 @@
 **Môn học:** Hệ Quản Trị Cơ Sở Dữ Liệu (DBMS) – Học kỳ 261  
 **Cơ sở dữ liệu sử dụng cho Web App:** Duy nhất **Microsoft SQL Server 2022/2025 (`ECommerceDB`)**  
 **Kiến trúc triển khai (Phương án A):**
-- **Frontend (`apps/web`):** Next.js 14 App Router, TypeScript, TailwindCSS, shadcn/ui style components (Port `3000`).
+- **Frontend (`apps/web`):** Next.js 14 App Router, TypeScript, TailwindCSS, shadcn/ui style components (Port `3005`).
 - **Backend (`apps/api`):** NestJS Modular REST API gồm 6 `@Module()` độc lập + `DatabaseModule` kết nối MS SQL Server qua `mssql` ConnectionPool (Port `4000`).
 
 ---
@@ -201,10 +201,10 @@ npm install
 npm run start:dev
 ```
 
-### Bước 3: Chạy Next.js Frontend (`apps/web` - Port `3000`)
+### Bước 3: Chạy Next.js Frontend (`apps/web` - Port `3005`)
 ```powershell
 cd apps/web
 npm install
 npm run dev
 ```
-Truy cập ứng dụng tại: **`http://localhost:3000`**
+Truy cập ứng dụng tại: **`http://localhost:3005`**

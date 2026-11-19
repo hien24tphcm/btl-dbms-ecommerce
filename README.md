@@ -13,7 +13,7 @@ Dự án thực hiện nghiên cứu so sánh sâu giữa hệ quản trị CSDL
   - **SQL (CSDL chính của Web App)**: Microsoft SQL Server (2022/2025 Developer / Enterprise).
   - **NoSQL (Đối sánh lý thuyết & thực nghiệm)**: Neo4j (Cypher 25, Neo4j 5.x LTS).
 - **Kiến trúc ứng dụng Web (Phương án A)**:
-  - **Frontend (`apps/web`)**: Next.js 14 App Router, TypeScript, TailwindCSS, shadcn/ui style components (Port `3000`).
+  - **Frontend (`apps/web`)**: Next.js 14 App Router, TypeScript, TailwindCSS, shadcn/ui style components (Port `3005`).
   - **Backend (`apps/api`)**: NestJS chia thành 6 `@Module()` độc lập (`AuthModule`, `CatalogModule`, `CartOrderModule`, `SellerModule`, `AdminModule`, `DbmsLabModule`) + `DatabaseModule` (`mssql` ConnectionPool, Port `4000`).
   - **Tài liệu kiến trúc chi tiết**: Xem tại [WEB_MODULES_DOCS.md](WEB_MODULES_DOCS.md).
 
