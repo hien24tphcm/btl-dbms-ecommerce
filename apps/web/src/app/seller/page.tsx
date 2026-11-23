@@ -12,11 +12,15 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
+  Search,
+  DollarSign,
+  ShoppingBag,
+  TrendingUp,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { formatCurrency } from '@/lib/utils';
-import { DbmsBadge } from '@/components/dbms-badge';
+import { getProductVisual } from '@/lib/product-visuals';
 
 export default function SellerCenterPage() {
   const { users, currentUser } = useAuth();
@@ -34,12 +38,13 @@ export default function SellerCenterPage() {
   } | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [sellerOrders, setSellerOrders] = useState<any[]>([]);
+  const [catalogSearch, setCatalogSearch] = useState<string>('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>('all');
 
-  // Date filters for FR-10 sp_GetSellerAnalytics
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
-  // Upsert Product Modal state (FR-07 sp_UpsertProduct)
+  // Product Modal state
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
   const [showProductModal, setShowProductModal] = useState<boolean>(false);
   const [formCategoryId, setFormCategoryId] = useState<number>(2);
@@ -136,8 +141,8 @@ export default function SellerCenterPage() {
       setShowProductModal(false);
       setToastMsg(
         editingProduct
-          ? `Đã cập nhật sản phẩm #${editingProduct.product_id} (EXEC dbo.sp_UpsertProduct — Query c).`
-          : `Đã thêm mới sản phẩm #${res.productId} vào gian hàng (EXEC dbo.sp_UpsertProduct — Query a).`,
+          ? `Đã cập nhật thông tin sản phẩm "${formName}".`
+          : `Đã đăng bán sản phẩm mới "${formName}" thành công!`,
       );
     } catch (err: any) {
       setErrorMsg(err.message);
@@ -161,9 +166,7 @@ export default function SellerCenterPage() {
       );
       await loadSellerData(activeSellerId);
       setToastMsg(
-        `Đã điều chỉnh kho (${delta > 0 ? `+${delta}` : delta}) cho "${updated?.name}". Tồn mới: ${updated?.stock_quantity} ${
-          updated?.is_low_stock ? '⚠️ [CẢNH BÁO TỒN KHO THẤP <= 5]' : ''
-        } (EXEC dbo.sp_AdjustInventory).`,
+        `Đã cập nhật tồn kho cho "${updated?.name}". Tồn kho hiện tại: ${updated?.stock_quantity}.`,
       );
     } catch (err: any) {
       setErrorMsg(err.message);
@@ -185,15 +188,12 @@ export default function SellerCenterPage() {
         }),
       });
       await loadSellerData(activeSellerId);
-      setToastMsg(
-        `Đã chuyển trạng thái đơn hàng #${orderId} sang "${nextStatus}" (EXEC dbo.sp_UpdateOrderFulfillment).`,
-      );
+      setToastMsg(`Đã cập nhật trạng thái đơn hàng #${orderId} thành công!`);
     } catch (err: any) {
       setErrorMsg(err.message);
     }
   };
 
-  // Group seller orders by order_id (since sp_GetSellerOrders returns 4-table JOIN line items)
   const groupedOrders: Record<number, { order: any; items: any[] }> =
     sellerOrders.reduce(
       (acc: Record<number, { order: any; items: any[] }>, row) => {
@@ -206,503 +206,559 @@ export default function SellerCenterPage() {
       {},
     );
 
+  const filteredOrderGroups = Object.values(groupedOrders).filter(({ order }) =>
+    orderStatusFilter === 'all'
+      ? true
+      : order.order_status === orderStatusFilter,
+  );
+
+  const filteredProducts = products.filter((p) =>
+    catalogSearch.trim() === ''
+      ? true
+      : p.name.toLowerCase().includes(catalogSearch.toLowerCase()) ||
+        p.category_name.toLowerCase().includes(catalogSearch.toLowerCase()),
+  );
+
   const getNextMonotonicStatus = (
     current: string,
   ): { next: string; label: string } | null => {
     if (current === 'pending')
-      return { next: 'processing', label: 'Xác nhận & Đóng gói (processing)' };
+      return { next: 'processing', label: 'Xác nhận & Đóng gói' };
     if (current === 'processing')
-      return { next: 'shipped', label: 'Giao ĐVVC (shipped)' };
+      return { next: 'shipped', label: 'Bàn giao Vận chuyển' };
     if (current === 'shipped')
-      return { next: 'delivered', label: 'Hoàn tất giao hàng (delivered)' };
+      return { next: 'delivered', label: 'Xác nhận Đã giao' };
     return null;
   };
 
+  const currentShopObj = sellerUsers.find(
+    (s) => Number(s.seller_id) === activeSellerId,
+  );
+
   return (
     <div className="space-y-6">
-      {/* Header & Shop Selector */}
-      <div className="flex flex-col justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">
-            Kênh Người Bán & Thống Kê Gian Hàng (Seller Center: FR-07 .. FR-10)
-          </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-slate-600">
-              Chọn Gian hàng quản lý (dbo.Sellers):
-            </span>
+      {/* Seller Studio Banner */}
+      <div className="flex flex-col justify-between gap-4 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 text-white shadow-lg md:flex-row md:items-center">
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md">
+            <Store className="h-7 w-7" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-indigo-500/30 px-2.5 py-0.5 text-[11px] font-bold text-indigo-200">
+                Kênh Đối Tác Bán Hàng
+              </span>
+              <span className="text-xs font-bold text-amber-400">
+                ★ {Number(currentShopObj?.seller_rating || 4.8).toFixed(2)}
+              </span>
+            </div>
+            <h1 className="mt-1 text-xl font-extrabold sm:text-2xl">
+              {currentShopObj?.shop_name || 'Trung Tâm Quản Lý Gian Hàng'}
+            </h1>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 backdrop-blur-xs">
+            <span className="text-xs text-slate-300">Gian hàng:</span>
             <select
               value={activeSellerId}
               onChange={(e) => setActiveSellerId(Number(e.target.value))}
-              className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-900 focus:outline-none"
+              className="bg-transparent text-xs font-bold text-white focus:outline-none"
             >
               {sellerUsers.map((s) => (
-                <option key={s.seller_id} value={Number(s.seller_id)}>
-                  Seller #{s.seller_id}: {s.shop_name} ({s.username}) — ★{' '}
-                  {Number(s.seller_rating).toFixed(2)}
+                <option
+                  key={s.seller_id}
+                  value={Number(s.seller_id)}
+                  className="text-slate-900"
+                >
+                  {s.shop_name}
                 </option>
               ))}
             </select>
           </div>
-        </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          <DbmsBadge
-            fr="FR-07"
-            queryType="(a, c) Upsert"
-            procedure="sp_UpsertProduct"
-          />
-          <DbmsBadge
-            fr="FR-08"
-            queryType="(c) Update"
-            procedure="sp_AdjustInventory"
-          />
-          <DbmsBadge
-            fr="FR-09"
-            queryType="(f) Join & (c) Update"
-            procedure="sp_GetSellerOrders / sp_UpdateOrderFulfillment"
-          />
-          <DbmsBadge
-            fr="FR-10"
-            queryType="(h) Aggregate"
-            procedure="sp_GetSellerAnalytics"
-          />
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-indigo-500"
+          >
+            <Plus className="h-4 w-4" />
+            Đăng sản phẩm mới
+          </button>
         </div>
       </div>
 
       {toastMsg && (
-        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+        <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
           <CheckCircle2 className="h-4 w-4 text-emerald-600" />
           <span>{toastMsg}</span>
         </div>
       )}
       {errorMsg && (
-        <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
+        <div className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
           <AlertCircle className="h-4 w-4 text-rose-600" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
+      <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-xs">
         <button
           type="button"
           onClick={() => setActiveTab('analytics')}
-          className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold transition ${
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition ${
             activeTab === 'analytics'
-              ? 'bg-indigo-600 text-white'
+              ? 'bg-indigo-600 text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           <BarChart3 className="h-4 w-4" />
-          1. Thống kê Doanh thu & Top 5 SP (FR-10)
+          Tổng quan Doanh thu
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('catalog')}
-          className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold transition ${
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition ${
             activeTab === 'catalog'
-              ? 'bg-indigo-600 text-white'
+              ? 'bg-indigo-600 text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           <Boxes className="h-4 w-4" />
-          2. Quản lý Sản phẩm & Tồn kho (FR-07, FR-08) [{products.length}]
+          Sản phẩm & Kho hàng ({products.length})
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('orders')}
-          className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold transition ${
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition ${
             activeTab === 'orders'
-              ? 'bg-indigo-600 text-white'
+              ? 'bg-indigo-600 text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           <Truck className="h-4 w-4" />
-          3. Điều phối Đơn hàng Gian hàng (FR-09) [
-          {Object.keys(groupedOrders).length}]
+          Quản lý Đơn hàng ({Object.keys(groupedOrders).length})
         </button>
       </div>
 
-      {/* TAB 1: SELLER ANALYTICS (FR-10: sp_GetSellerAnalytics) */}
+      {/* TAB 1: ANALYTICS */}
       {activeTab === 'analytics' && (
         <div className="space-y-6">
-          {/* Date Filter Bar */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              loadSellerData(activeSellerId);
-            }}
-            className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-          >
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-700">
-                Từ ngày (@start_date)
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-slate-700">
-                Đến ngày (@end_date)
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs"
-              />
-            </div>
-            <button
-              type="submit"
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700"
-            >
-              Thống kê (EXEC dbo.sp_GetSellerAnalytics)
-            </button>
-          </form>
-
-          {/* KPI Summary Cards (Result Set 1 of sp_GetSellerAnalytics) */}
+          {/* KPI Summary Cards */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <span className="text-xs font-bold uppercase text-slate-400">
-                Tổng doanh thu hoàn tất (SUM(final_amount))
-              </span>
-              <div className="mt-2 text-2xl font-extrabold text-indigo-600">
-                {formatCurrency(analytics?.summary?.total_revenue)}
+            <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                <DollarSign className="h-6 w-6" />
               </div>
-              <span className="mt-1 block text-[11px] text-slate-500">
-                Gian hàng: {analytics?.summary?.shop_name}
-              </span>
+              <div>
+                <span className="text-xs font-bold text-slate-400">
+                  Doanh thu đơn hoàn tất
+                </span>
+                <div className="mt-0.5 text-2xl font-extrabold text-slate-900">
+                  {formatCurrency(analytics?.summary?.total_revenue)}
+                </div>
+              </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <span className="text-xs font-bold uppercase text-slate-400">
-                Số đơn giao thành công (COUNT(DISTINCT order_id))
-              </span>
-              <div className="mt-2 text-2xl font-extrabold text-emerald-600">
-                {analytics?.summary?.completed_order_count || 0} đơn
+            <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                <ShoppingBag className="h-6 w-6" />
               </div>
-              <span className="mt-1 block text-[11px] text-slate-500">
-                Chỉ tính đơn ở trạng thái delivered
-              </span>
+              <div>
+                <span className="text-xs font-bold text-slate-400">
+                  Đơn giao thành công
+                </span>
+                <div className="mt-0.5 text-2xl font-extrabold text-emerald-600">
+                  {analytics?.summary?.completed_order_count || 0} đơn
+                </div>
+              </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <span className="text-xs font-bold uppercase text-slate-400">
-                Tổng sản lượng tiêu thụ (SUM(quantity))
-              </span>
-              <div className="mt-2 text-2xl font-extrabold text-slate-900">
-                {analytics?.summary?.total_items_sold || 0} sản phẩm
+            <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+                <TrendingUp className="h-6 w-6" />
               </div>
-              <span className="mt-1 block text-[11px] text-slate-500">
-                Result Set #1 của sp_GetSellerAnalytics
-              </span>
+              <div>
+                <span className="text-xs font-bold text-slate-400">
+                  Tổng sản phẩm đã bán
+                </span>
+                <div className="mt-0.5 text-2xl font-extrabold text-slate-900">
+                  {analytics?.summary?.total_items_sold || 0} sản phẩm
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Top 5 Best-Selling Products Table (Result Set 2 of sp_GetSellerAnalytics) */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-900">
-                Top 5 Sản phẩm bán chạy nhất Gian hàng (FR-10 | Query h: GROUP BY
-                & SUM)
-              </h3>
-              <span className="font-mono text-xs text-slate-400">
-                Result Set #2 của dbo.sp_GetSellerAnalytics
-              </span>
+          {/* Date Filter & Top 5 Best-Selling Products */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">
+                  Top 5 Sản Phẩm Bán Chạy Nhất Gian Hàng
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Xếp hạng theo số lượng tiêu thụ và doanh thu đóng góp
+                </p>
+              </div>
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  loadSellerData(activeSellerId);
+                }}
+                className="flex flex-wrap items-center gap-2"
+              >
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs"
+                />
+                <span className="text-xs text-slate-400">đến</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs"
+                />
+                <button
+                  type="submit"
+                  className="rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-slate-800"
+                >
+                  Lọc kỳ
+                </button>
+              </form>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
-                  <tr>
-                    <th className="px-4 py-3">Hạng</th>
-                    <th className="px-4 py-3">product_id</th>
-                    <th className="px-4 py-3">Tên sản phẩm</th>
-                    <th className="px-4 py-3 text-center">
-                      Tổng SL bán (SUM(od.quantity))
-                    </th>
-                    <th className="px-4 py-3 text-right">
-                      Doanh thu SP (SUM(od.subtotal))
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {(analytics?.topProducts || []).map((tp, idx) => (
-                    <tr key={tp.product_id}>
-                      <td className="px-4 py-3 font-bold text-indigo-600">
-                        #{idx + 1}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-slate-500">
-                        PID #{tp.product_id}
-                      </td>
-                      <td className="px-4 py-3 font-bold text-slate-900">
-                        {tp.product_name}
-                      </td>
-                      <td className="px-4 py-3 text-center font-bold">
-                        {tp.total_sold_quantity}
-                      </td>
-                      <td className="px-4 py-3 text-right font-bold text-emerald-700">
-                        {formatCurrency(tp.total_revenue)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {(analytics?.topProducts || []).length === 0 ? (
+              <p className="py-8 text-center text-sm text-slate-500">
+                Chưa có dữ liệu đơn hàng hoàn tất trong khoảng thời gian này.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {(analytics?.topProducts || []).map((tp, idx) => {
+                  const maxRev = Number(
+                    analytics?.topProducts?.[0]?.total_revenue || 1,
+                  );
+                  const pct = Math.max(
+                    15,
+                    Math.round((Number(tp.total_revenue) / maxRev) * 100),
+                  );
+                  return (
+                    <div
+                      key={tp.product_id}
+                      className="rounded-xl border border-slate-100 bg-slate-50/70 p-4"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-[11px] font-bold text-white">
+                            {idx + 1}
+                          </span>
+                          <span className="text-sm font-bold text-slate-900">
+                            {tp.product_name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-slate-600">
+                            Đã bán: <strong>{tp.total_sold_quantity}</strong>
+                          </span>
+                          <span className="text-sm font-extrabold text-indigo-600">
+                            {formatCurrency(tp.total_revenue)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-indigo-600 to-violet-500"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* TAB 2: PRODUCT CATALOG & INVENTORY (FR-07 & FR-08) */}
+      {/* TAB 2: PRODUCT CATALOG & INVENTORY */}
       {activeTab === 'catalog' && (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div>
-              <h3 className="text-base font-bold text-slate-900">
-                Danh mục Sản phẩm & Quản trị Tồn kho (FR-07 & FR-08)
-              </h3>
-              <p className="text-xs text-slate-500">
-                Cảnh báo tự động khi{' '}
-                <code className="font-mono">
-                  stock_quantity &lt;= @low_stock_threshold (5)
-                </code>
-                .
-              </p>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+            <div className="relative flex-1 sm:max-w-xs">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                value={catalogSearch}
+                onChange={(e) => setCatalogSearch(e.target.value)}
+                placeholder="Tìm nhanh sản phẩm trong kho..."
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs focus:border-indigo-500 focus:bg-white focus:outline-none"
+              />
             </div>
+
             <button
               type="button"
               onClick={openCreateModal}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700"
             >
               <Plus className="h-4 w-4" />
-              Thêm sản phẩm mới (sp_UpsertProduct)
+              Thêm sản phẩm
             </button>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs">
             <table className="w-full text-left text-xs">
-              <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+              <thead className="border-b border-slate-100 bg-slate-50/80 text-slate-500">
                 <tr>
-                  <th className="px-4 py-3">ID</th>
-                  <th className="px-4 py-3">Sản phẩm</th>
-                  <th className="px-4 py-3">Danh mục</th>
-                  <th className="px-4 py-3 text-right">Giá niêm yết</th>
-                  <th className="px-4 py-3 text-center">Tồn kho (FR-08)</th>
-                  <th className="px-4 py-3 text-center">Đã bán</th>
-                  <th className="px-4 py-3 text-center">Trạng thái</th>
-                  <th className="px-4 py-3 text-right">
-                    Điều chỉnh kho (sp_AdjustInventory) & Sửa
+                  <th className="px-4 py-3.5">Sản phẩm</th>
+                  <th className="px-4 py-3.5">Danh mục</th>
+                  <th className="px-4 py-3.5 text-right">Giá bán</th>
+                  <th className="px-4 py-3.5 text-center">Tồn kho</th>
+                  <th className="px-4 py-3.5 text-center">Đã bán</th>
+                  <th className="px-4 py-3.5 text-center">Trạng thái</th>
+                  <th className="px-4 py-3.5 text-right">
+                    Nhập/Xuất kho nhanh & Chỉnh sửa
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {products.map((p) => (
-                  <tr key={p.product_id}>
-                    <td className="px-4 py-3 font-mono text-slate-500">
-                      #{p.product_id}
-                    </td>
-                    <td className="px-4 py-3 font-bold text-slate-900">
-                      {p.name}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {p.category_name}
-                    </td>
-                    <td className="px-4 py-3 text-right font-bold text-indigo-600">
-                      {formatCurrency(p.price)}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-bold ${
-                          p.is_low_stock
-                            ? 'bg-rose-100 text-rose-800'
-                            : 'bg-emerald-100 text-emerald-800'
-                        }`}
-                      >
-                        {p.is_low_stock ? (
-                          <AlertTriangle className="h-3 w-3" />
-                        ) : null}
-                        {p.stock_quantity}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center font-semibold">
-                      {p.sold_quantity}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="rounded bg-slate-100 px-2 py-0.5 font-semibold text-slate-700">
-                        {p.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="inline-flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleAdjustStock(p.product_id, 10)}
-                          className="rounded border border-emerald-300 bg-emerald-50 px-2 py-1 font-bold text-emerald-700 hover:bg-emerald-100"
-                          title="Nhập kho +10 (sp_AdjustInventory)"
+                {filteredProducts.map((p) => {
+                  const vis = getProductVisual(p.category_id, p.name);
+                  return (
+                    <tr key={p.product_id} className="hover:bg-slate-50/60">
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${vis.gradient} text-lg`}
+                          >
+                            {vis.emoji}
+                          </div>
+                          <span className="font-bold text-slate-900">
+                            {p.name}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-slate-600">
+                        {p.category_name}
+                      </td>
+                      <td className="px-4 py-3.5 text-right font-extrabold text-indigo-600">
+                        {formatCurrency(p.price)}
+                      </td>
+                      <td className="px-4 py-3.5 text-center">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-bold ${
+                            p.is_low_stock
+                              ? 'bg-rose-100 text-rose-800'
+                              : 'bg-emerald-100 text-emerald-800'
+                          }`}
                         >
-                          +10
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleAdjustStock(p.product_id, -5)}
-                          className="rounded border border-amber-300 bg-amber-50 px-2 py-1 font-bold text-amber-800 hover:bg-amber-100"
-                          title="Xuất kho -5 (sp_AdjustInventory)"
+                          {p.is_low_stock ? (
+                            <AlertTriangle className="h-3 w-3" />
+                          ) : null}
+                          {p.stock_quantity}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-center font-semibold">
+                        {p.sold_quantity}
+                      </td>
+                      <td className="px-4 py-3.5 text-center">
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                            p.status === 'active'
+                              ? 'bg-indigo-50 text-indigo-700'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}
                         >
-                          -5
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(p)}
-                          className="inline-flex items-center gap-1 rounded border border-slate-300 bg-white px-2.5 py-1 font-semibold text-slate-700 hover:bg-slate-50"
-                        >
-                          <Edit3 className="h-3 w-3" />
-                          Sửa
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {p.status === 'active'
+                            ? 'Đang bán'
+                            : p.status === 'out_of_stock'
+                              ? 'Hết hàng'
+                              : 'Tạm ẩn'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
+                        <div className="inline-flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleAdjustStock(p.product_id, 10)}
+                            className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 font-bold text-emerald-700 hover:bg-emerald-100"
+                          >
+                            +10
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAdjustStock(p.product_id, -5)}
+                            className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 font-bold text-amber-800 hover:bg-amber-100"
+                          >
+                            -5
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(p)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-semibold text-slate-700 hover:bg-slate-50"
+                          >
+                            <Edit3 className="h-3 w-3" />
+                            Sửa
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* TAB 3: SELLER ORDER FULFILLMENT (FR-09) */}
+      {/* TAB 3: ORDER FULFILLMENT */}
       {activeTab === 'orders' && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="text-base font-bold text-slate-900">
-              Tiếp nhận & Luân chuyển trạng thái đơn hàng một chiều (FR-09)
-            </h3>
-            <p className="text-xs text-slate-500">
-              Quy trình chuyển trạng thái nghiêm ngặt trong{' '}
-              <code className="font-mono">dbo.sp_UpdateOrderFulfillment</code>:{' '}
-              <strong>pending → processing → shipped → delivered</strong>.
-            </p>
+          <div className="flex flex-wrap gap-1.5 rounded-2xl border border-slate-200 bg-white p-2 shadow-xs">
+            {[
+              { key: 'all', label: 'Tất cả đơn' },
+              { key: 'pending', label: 'Chờ xác nhận' },
+              { key: 'processing', label: 'Đang đóng gói' },
+              { key: 'shipped', label: 'Đang giao' },
+              { key: 'delivered', label: 'Đã giao' },
+              { key: 'cancelled', label: 'Đã hủy' },
+            ].map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setOrderStatusFilter(t.key)}
+                className={`rounded-xl px-3.5 py-2 text-xs font-bold transition ${
+                  orderStatusFilter === t.key
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
 
-          {Object.values(groupedOrders).map(({ order, items }) => {
-            const nextTransition = getNextMonotonicStatus(order.order_status);
-            return (
-              <div
-                key={order.order_id}
-                className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 bg-slate-50 px-5 py-3">
-                  <div className="flex flex-wrap items-center gap-3 text-xs">
-                    <span className="text-sm font-bold text-slate-900">
-                      Order #{order.order_id}
-                    </span>
-                    <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 font-bold uppercase text-indigo-800">
-                      {order.order_status}
-                    </span>
-                    <span className="text-slate-600">
-                      Khách mua: <strong>{order.buyer_name}</strong> (
-                      {order.buyer_email})
-                    </span>
-                    <span className="text-slate-500">
-                      • Giao tới: {order.shipping_address}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-extrabold text-indigo-600">
-                      {formatCurrency(order.final_amount)}
-                    </span>
-                    {nextTransition && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleAdvanceOrderStatus(
-                            order.order_id,
-                            nextTransition.next,
-                          )
-                        }
-                        className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-indigo-700"
-                      >
-                        <span>{nextTransition.label}</span>
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="divide-y divide-slate-100 px-5 py-3">
-                  {items.map((it) => (
-                    <div
-                      key={it.order_detail_id}
-                      className="flex items-center justify-between py-2 text-xs"
-                    >
-                      <span className="font-semibold text-slate-800">
-                        {it.product_name}{' '}
-                        <span className="font-mono font-normal text-slate-400">
-                          (PID #{it.product_id})
-                        </span>
+          {filteredOrderGroups.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-sm text-slate-500">
+              Không có đơn hàng nào ở trạng thái này.
+            </div>
+          ) : (
+            filteredOrderGroups.map(({ order, items }) => {
+              const nextTransition = getNextMonotonicStatus(order.order_status);
+              return (
+                <div
+                  key={order.order_id}
+                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/70 px-5 py-3.5">
+                    <div className="flex flex-wrap items-center gap-3 text-xs">
+                      <span className="text-sm font-bold text-slate-900">
+                        Đơn hàng #{order.order_id}
+                      </span>
+                      <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 font-bold uppercase text-indigo-800">
+                        {order.order_status}
                       </span>
                       <span className="text-slate-600">
-                        {it.quantity} x {formatCurrency(it.unit_price)} ={' '}
-                        <strong className="text-slate-900">
-                          {formatCurrency(it.subtotal)}
-                        </strong>
+                        Khách hàng: <strong>{order.buyer_name}</strong>
+                      </span>
+                      <span className="text-slate-500">
+                        • Địa chỉ: {order.shipping_address}
                       </span>
                     </div>
-                  ))}
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-extrabold text-indigo-600">
+                        {formatCurrency(order.final_amount)}
+                      </span>
+                      {nextTransition && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleAdvanceOrderStatus(
+                              order.order_id,
+                              nextTransition.next,
+                            )
+                          }
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-indigo-700"
+                        >
+                          <span>{nextTransition.label}</span>
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="divide-y divide-slate-100 px-5 py-3">
+                    {items.map((it) => (
+                      <div
+                        key={it.order_detail_id}
+                        className="flex items-center justify-between py-2 text-xs"
+                      >
+                        <span className="font-semibold text-slate-800">
+                          {it.product_name}
+                        </span>
+                        <span className="text-slate-600">
+                          {it.quantity} × {formatCurrency(it.unit_price)} ={' '}
+                          <strong className="text-slate-900">
+                            {formatCurrency(it.subtotal)}
+                          </strong>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       )}
 
-      {/* Upsert Product Modal (FR-07: sp_UpsertProduct) */}
+      {/* Add / Edit Product Modal */}
       {showProductModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
           <form
             onSubmit={handleSaveProduct}
-            className="w-full max-w-lg space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-xl"
+            className="w-full max-w-lg space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-slate-900">
                 {editingProduct
-                  ? `Cập nhật Sản phẩm #${editingProduct.product_id} (sp_UpsertProduct)`
-                  : 'Thêm Sản phẩm mới vào Gian hàng (sp_UpsertProduct)'}
+                  ? 'Chỉnh sửa thông tin sản phẩm'
+                  : 'Đăng sản phẩm mới'}
               </h3>
               <button
                 type="button"
                 onClick={() => setShowProductModal(false)}
-                className="text-xs font-bold text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600"
               >
                 ✕
               </button>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-semibold text-slate-700">
-                  Tên sản phẩm (@name)
+                <label className="mb-1 block text-xs font-bold text-slate-700">
+                  Tên sản phẩm
                 </label>
                 <input
                   type="text"
                   required
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs"
+                  className="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold text-slate-700">
-                  Danh mục (@category_id)
+                <label className="mb-1 block text-xs font-bold text-slate-700">
+                  Ngành hàng
                 </label>
                 <select
                   value={formCategoryId}
                   onChange={(e) => setFormCategoryId(Number(e.target.value))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs"
+                  className="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs"
                 >
                   {categories.map((c) => (
                     <option key={c.category_id} value={c.category_id}>
@@ -713,23 +769,23 @@ export default function SellerCenterPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold text-slate-700">
-                  Trạng thái (@status)
+                <label className="mb-1 block text-xs font-bold text-slate-700">
+                  Trạng thái hiển thị
                 </label>
                 <select
                   value={formStatus}
                   onChange={(e) => setFormStatus(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs"
+                  className="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs"
                 >
-                  <option value="active">active</option>
-                  <option value="inactive">inactive</option>
-                  <option value="out_of_stock">out_of_stock</option>
+                  <option value="active">Đang mở bán</option>
+                  <option value="inactive">Tạm ẩn</option>
+                  <option value="out_of_stock">Hết hàng</option>
                 </select>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold text-slate-700">
-                  Giá bán USD (@price)
+                <label className="mb-1 block text-xs font-bold text-slate-700">
+                  Giá niêm yết (USD)
                 </label>
                 <input
                   type="number"
@@ -738,13 +794,13 @@ export default function SellerCenterPage() {
                   required
                   value={formPrice}
                   onChange={(e) => setFormPrice(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs"
+                  className="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold text-slate-700">
-                  Tồn kho (@stock_quantity)
+                <label className="mb-1 block text-xs font-bold text-slate-700">
+                  Số lượng tồn kho
                 </label>
                 <input
                   type="number"
@@ -752,19 +808,19 @@ export default function SellerCenterPage() {
                   required
                   value={formStock}
                   onChange={(e) => setFormStock(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs"
+                  className="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs"
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-semibold text-slate-700">
-                  Mô tả (@description)
+                <label className="mb-1 block text-xs font-bold text-slate-700">
+                  Mô tả chi tiết
                 </label>
                 <textarea
                   rows={3}
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs"
+                  className="w-full rounded-xl border border-slate-300 p-3 text-xs"
                 />
               </div>
             </div>
@@ -773,15 +829,15 @@ export default function SellerCenterPage() {
               <button
                 type="button"
                 onClick={() => setShowProductModal(false)}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600"
+                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600"
               >
                 Hủy
               </button>
               <button
                 type="submit"
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700"
+                className="rounded-xl bg-indigo-600 px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-indigo-700"
               >
-                Lưu sản phẩm (EXEC dbo.sp_UpsertProduct)
+                Lưu sản phẩm
               </button>
             </div>
           </form>

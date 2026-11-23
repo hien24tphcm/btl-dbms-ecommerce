@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { MssqlService } from '../../database/mssql.service';
 
 @Injectable()
@@ -13,6 +13,7 @@ export class CatalogService {
         c.description,
         c.parent_id,
         p.category_name AS parent_category_name,
+        (SELECT COUNT(*) FROM dbo.Products pr WHERE pr.category_id = c.category_id AND pr.is_active = 1) AS product_count,
         c.created_at
       FROM dbo.Categories c
       LEFT JOIN dbo.Categories p ON c.parent_id = p.category_id
@@ -21,12 +22,82 @@ export class CatalogService {
     return res.recordset;
   }
 
-  /**
-   * FR-01 | Query (e): Composite Condition Filter via dbo.sp_SearchProducts
-   */
+  async getShops() {
+    const res = await this.db.query(`
+      SELECT 
+        s.seller_id,
+        s.shop_name,
+        s.store_description,
+        s.rating,
+        s.is_approved,
+        s.address,
+        (SELECT COUNT(*) FROM dbo.Products p WHERE p.seller_id = s.seller_id AND p.is_active = 1) AS product_count
+      FROM dbo.Sellers s
+      WHERE s.is_approved = 1
+      ORDER BY s.rating DESC, s.seller_id ASC;
+    `);
+    return res.recordset;
+  }
+
+  async getShopDetails(sellerId: number) {
+    const [shopRes, productsRes] = await Promise.all([
+      this.db.query(
+        `
+        SELECT 
+          s.seller_id,
+          s.shop_name,
+          s.store_description,
+          s.rating,
+          s.is_approved,
+          s.address,
+          s.created_at,
+          (SELECT COUNT(*) FROM dbo.Products p WHERE p.seller_id = s.seller_id AND p.is_active = 1) AS product_count,
+          (SELECT ISNULL(SUM(p.sold_quantity), 0) FROM dbo.Products p WHERE p.seller_id = s.seller_id) AS total_sold
+        FROM dbo.Sellers s
+        WHERE s.seller_id = @seller_id;
+        `,
+        { seller_id: sellerId },
+      ),
+      this.db.query(
+        `
+        SELECT 
+          p.product_id,
+          p.seller_id,
+          s.shop_name,
+          s.rating AS seller_rating,
+          p.category_id,
+          c.category_name,
+          p.name,
+          p.description,
+          p.price,
+          p.stock_quantity,
+          p.sold_quantity,
+          p.status,
+          p.created_at
+        FROM dbo.Products p
+        JOIN dbo.Sellers s ON p.seller_id = s.seller_id
+        JOIN dbo.Categories c ON p.category_id = c.category_id
+        WHERE p.seller_id = @seller_id AND p.is_active = 1 AND p.status = 'active'
+        ORDER BY p.sold_quantity DESC, p.product_id DESC;
+        `,
+        { seller_id: sellerId },
+      ),
+    ]);
+
+    if (!shopRes.recordset[0]) {
+      throw new NotFoundException('Không tìm thấy gian hàng.');
+    }
+
+    return {
+      shop: shopRes.recordset[0],
+      products: productsRes.recordset,
+    };
+  }
+
   async searchProducts(filters: {
     keyword?: string;
     categoryId?: number;
+    sellerId?: number;
     minPrice?: number;
     maxPrice?: number;
     minRating?: number;
@@ -54,14 +125,15 @@ export class CatalogService {
       in_stock_only: filters.inStockOnly ? 1 : 0,
       sort_by: filters.sortBy || 'newest',
     });
+
+    if (filters.sellerId && !Number.isNaN(filters.sellerId)) {
+      return res.recordset.filter(
+        (p: any) => Number(p.seller_id) === Number(filters.sellerId),
+      );
+    }
     return res.recordset;
   }
 
-  /**
-   * FR-02 | Query (d): Single Condition Lookup via dbo.sp_GetProductDetails
-   * Returns 2 Result Sets: [0] Product & Seller overview, [1] Reviews list
-   * Combined with FR-06 | Query (h): Rating aggregation via dbo.sp_GetProductRatingStats
-   */
   async getProductDetails(productId: number) {
     const [detailsRes, statsRes] = await Promise.all([
       this.db.executeProcedure('dbo.sp_GetProductDetails', {
@@ -72,16 +144,51 @@ export class CatalogService {
       }),
     ]);
 
+    const product = detailsRes.recordsets[0]?.[0] || null;
+    let relatedProducts: any[] = [];
+
+    if (product) {
+      const relRes = await this.db.query(
+        `
+        SELECT TOP 4
+          p.product_id,
+          p.seller_id,
+          s.shop_name,
+          s.rating AS seller_rating,
+          p.category_id,
+          c.category_name,
+          p.name,
+          p.description,
+          p.price,
+          p.stock_quantity,
+          p.sold_quantity,
+          p.status
+        FROM dbo.Products p
+        JOIN dbo.Sellers s ON p.seller_id = s.seller_id
+        JOIN dbo.Categories c ON p.category_id = c.category_id
+        WHERE p.is_active = 1
+          AND p.status = 'active'
+          AND p.product_id <> @product_id
+          AND (p.category_id = @category_id OR p.seller_id = @seller_id)
+        ORDER BY CASE WHEN p.category_id = @category_id THEN 0 ELSE 1 END, p.sold_quantity DESC;
+        `,
+        {
+          product_id: productId,
+          category_id: product.category_id,
+          seller_id: product.seller_id,
+        },
+      );
+      relatedProducts = relRes.recordset;
+    }
+
     return {
-      product: detailsRes.recordsets[0]?.[0] || null,
+      product,
       reviews: detailsRes.recordsets[1] || [],
       ratingStats: statsRes.recordset?.[0] || null,
+      relatedProducts,
     };
   }
 
-  /**
-   * FR-06 | Query (h): Review Rating Aggregation via dbo.sp_GetProductRatingStats
-   */
   async getProductRatingStats(productId: number) {
     const res = await this.db.executeProcedure('dbo.sp_GetProductRatingStats', {
       product_id: productId,

@@ -53,6 +53,49 @@ export class CartOrderService {
   }
 
   /**
+   * Update exact cart item quantity (supports - / + stepper in Cart UI)
+   */
+  async updateCartItemQuantity(params: {
+    userId: number;
+    cartItemId: number;
+    quantity: number;
+  }) {
+    if (params.quantity <= 0) {
+      return this.removeFromCart({
+        userId: params.userId,
+        cartItemId: params.cartItemId,
+      });
+    }
+
+    await this.db.query(
+      `
+      DECLARE @stock INT;
+      SELECT @stock = p.stock_quantity
+      FROM dbo.Cart_Items ci
+      JOIN dbo.Products p ON ci.product_id = p.product_id
+      WHERE ci.cart_item_id = @cart_item_id AND ci.user_id = @user_id;
+
+      IF @stock IS NULL
+        THROW 50002, 'Cart item not found.', 1;
+
+      IF @quantity > @stock
+        THROW 50002, 'Số lượng vượt quá tồn kho khả dụng của sản phẩm.', 1;
+
+      UPDATE dbo.Cart_Items
+      SET quantity = @quantity, added_at = SYSUTCDATETIME()
+      WHERE cart_item_id = @cart_item_id AND user_id = @user_id;
+      `,
+      {
+        user_id: params.userId,
+        cart_item_id: params.cartItemId,
+        quantity: params.quantity,
+      },
+    );
+
+    return this.getCart(params.userId);
+  }
+
+  /**
    * FR-03 | Query (b) Delete: dbo.sp_RemoveFromCart
    */
   async removeFromCart(params: {

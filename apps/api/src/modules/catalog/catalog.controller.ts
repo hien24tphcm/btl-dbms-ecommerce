@@ -1,19 +1,39 @@
-import { Controller, Get, Param, Query, ParseIntPipe, Inject } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  ParseIntPipe,
+  Inject,
+} from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 
 @Controller()
 export class CatalogController {
-  constructor(@Inject(CatalogService) private readonly catalogService: CatalogService) {}
+  constructor(
+    @Inject(CatalogService) private readonly catalogService: CatalogService,
+  ) {}
 
   @Get('categories')
   async getCategories() {
     return this.catalogService.getCategories();
   }
 
+  @Get('shops')
+  async getShops() {
+    return this.catalogService.getShops();
+  }
+
+  @Get('shops/:id')
+  async getShopDetails(@Param('id', ParseIntPipe) id: number) {
+    return this.catalogService.getShopDetails(id);
+  }
+
   @Get('products')
   async searchProducts(
     @Query('keyword') keyword?: string,
     @Query('categoryId') categoryId?: string,
+    @Query('sellerId') sellerId?: string,
     @Query('minPrice') minPrice?: string,
     @Query('maxPrice') maxPrice?: string,
     @Query('minRating') minRating?: string,
@@ -23,9 +43,15 @@ export class CatalogController {
     return this.catalogService.searchProducts({
       keyword: keyword || undefined,
       categoryId: categoryId ? Number(categoryId) : undefined,
-      minPrice: minPrice !== undefined && minPrice !== '' ? Number(minPrice) : undefined,
-      maxPrice: maxPrice !== undefined && maxPrice !== '' ? Number(maxPrice) : undefined,
-      minRating: minRating !== undefined && minRating !== '' ? Number(minRating) : undefined,
+      sellerId: sellerId ? Number(sellerId) : undefined,
+      minPrice:
+        minPrice !== undefined && minPrice !== '' ? Number(minPrice) : undefined,
+      maxPrice:
+        maxPrice !== undefined && maxPrice !== '' ? Number(maxPrice) : undefined,
+      minRating:
+        minRating !== undefined && minRating !== ''
+          ? Number(minRating)
+          : undefined,
       inStockOnly: inStockOnly === '1' || inStockOnly === 'true',
       sortBy: sortBy || 'newest',
     });

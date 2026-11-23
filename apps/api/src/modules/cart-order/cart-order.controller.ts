@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Body,
   Param,
@@ -33,6 +34,22 @@ export class CartOrderController {
       userId: Number(body.userId),
       productId: Number(body.productId),
       quantity: Number(body.quantity ?? 1),
+    });
+  }
+
+  @Patch('cart/items')
+  async updateCartItemQuantity(
+    @Body()
+    body: {
+      userId: number;
+      cartItemId: number;
+      quantity: number;
+    },
+  ) {
+    return this.cartOrderService.updateCartItemQuantity({
+      userId: Number(body.userId),
+      cartItemId: Number(body.cartItemId),
+      quantity: Number(body.quantity),
     });
   }
 

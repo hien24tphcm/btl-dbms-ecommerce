@@ -14,6 +14,7 @@ export interface DemoUser {
   is_active: boolean;
   seller_id?: number | null;
   shop_name?: string | null;
+  store_description?: string | null;
   seller_rating?: number | null;
   is_approved?: boolean | null;
 }
@@ -22,26 +23,33 @@ interface AuthContextValue {
   users: DemoUser[];
   currentUser: DemoUser | null;
   cartCount: number;
+  wishlistIds: number[];
   loading: boolean;
   switchUser: (username: string) => Promise<void>;
   refreshUsers: () => Promise<void>;
   refreshCartCount: () => Promise<void>;
+  toggleWishlist: (productId: number) => void;
+  setCurrentUser: React.Dispatch<React.SetStateAction<DemoUser | null>>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   users: [],
   currentUser: null,
   cartCount: 0,
+  wishlistIds: [],
   loading: true,
   switchUser: async () => {},
   refreshUsers: async () => {},
   refreshCartCount: async () => {},
+  toggleWishlist: () => {},
+  setCurrentUser: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [users, setUsers] = useState<DemoUser[]>([]);
   const [currentUser, setCurrentUser] = useState<DemoUser | null>(null);
   const [cartCount, setCartCount] = useState<number>(0);
+  const [wishlistIds, setWishlistIds] = useState<number[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   const fetchCartCount = async (uid: number) => {
@@ -77,7 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await fetchCartCount(matched.user_id);
       }
     } catch (e) {
-      console.error('Failed to load demo accounts:', e);
+      console.error('Failed to load accounts:', e);
     } finally {
       setLoading(false);
     }
@@ -100,7 +108,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const toggleWishlist = (productId: number) => {
+    setWishlistIds((prev) => {
+      const next = prev.includes(productId)
+        ? prev.filter((id) => id !== productId)
+        : [...prev, productId];
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('novamart_wishlist', JSON.stringify(next));
+      }
+      return next;
+    });
+  };
+
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedWish = window.localStorage.getItem('novamart_wishlist');
+        if (savedWish) setWishlistIds(JSON.parse(savedWish));
+      } catch {}
+    }
     refreshUsers();
   }, []);
 
@@ -110,10 +136,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         users,
         currentUser,
         cartCount,
+        wishlistIds,
         loading,
         switchUser,
         refreshUsers,
         refreshCartCount,
+        toggleWishlist,
+        setCurrentUser,
       }}
     >
       {children}

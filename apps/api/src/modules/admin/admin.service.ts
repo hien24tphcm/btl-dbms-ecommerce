@@ -90,6 +90,46 @@ export class AdminService {
     return this.getSellers();
   }
 
+  async createVoucher(params: {
+    voucherCode: string;
+    discountPercent: number;
+    minOrderValue: number;
+    maxDiscount?: number;
+    usageLimit?: number;
+  }) {
+    const code = params.voucherCode.trim().toUpperCase();
+    await this.db.query(
+      `
+      IF EXISTS (SELECT 1 FROM dbo.Vouchers WHERE voucher_code = @code)
+      BEGIN
+        UPDATE dbo.Vouchers
+        SET discount_percent = @discount_percent,
+            min_order_value = @min_order_value,
+            max_discount = @max_discount,
+            usage_limit = @usage_limit
+        WHERE voucher_code = @code;
+      END
+      ELSE
+      BEGIN
+        INSERT INTO dbo.Vouchers (voucher_code, discount_percent, min_order_value, max_discount, valid_from, expired_at, usage_limit, used_count)
+        VALUES (@code, @discount_percent, @min_order_value, @max_discount, SYSUTCDATETIME(), DATEADD(YEAR, 1, SYSUTCDATETIME()), @usage_limit, 0);
+      END
+      `,
+      {
+        code,
+        discount_percent: params.discountPercent,
+        min_order_value: params.minOrderValue || 0,
+        max_discount: params.maxDiscount ?? null,
+        usage_limit: params.usageLimit || 200,
+      },
+    );
+
+    const res = await this.db.query(
+      `SELECT *, (usage_limit - used_count) AS remaining_uses FROM dbo.Vouchers ORDER BY min_order_value ASC`,
+    );
+    return res.recordset;
+  }
+
   /**
    * FR-12 | Query (g) Subquery & Query (h) Aggregate Functions:
    * - Calls dbo.sp_GetAboveAverageSellers

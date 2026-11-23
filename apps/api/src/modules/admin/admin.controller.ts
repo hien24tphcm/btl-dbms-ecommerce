@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Body,
   Param,
@@ -12,7 +13,9 @@ import { AdminService } from './admin.service';
 
 @Controller('admin')
 export class AdminController {
-  constructor(@Inject(AdminService) private readonly adminService: AdminService) {}
+  constructor(
+    @Inject(AdminService) private readonly adminService: AdminService,
+  ) {}
 
   @Get('users')
   async getUsers() {
@@ -53,5 +56,28 @@ export class AdminController {
     return this.adminService.getPlatformAnalytics(
       adminId ? Number(adminId) : undefined,
     );
+  }
+
+  @Post('vouchers')
+  async createVoucher(
+    @Body()
+    body: {
+      voucherCode: string;
+      discountPercent: number;
+      minOrderValue: number;
+      maxDiscount?: number;
+      usageLimit?: number;
+    },
+  ) {
+    return this.adminService.createVoucher({
+      voucherCode: body.voucherCode,
+      discountPercent: Number(body.discountPercent),
+      minOrderValue: Number(body.minOrderValue || 0),
+      maxDiscount:
+        body.maxDiscount !== undefined && body.maxDiscount !== null
+          ? Number(body.maxDiscount)
+          : undefined,
+      usageLimit: body.usageLimit ? Number(body.usageLimit) : 200,
+    });
   }
 }
