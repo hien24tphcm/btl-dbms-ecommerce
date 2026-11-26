@@ -1,0 +1,110 @@
+Cấu hình: {"db":"both","mode":"ALL","buyers":50,"stock":5,"think":0,"qty":1,"retry":20,"repeat":10,"failEvery":0,"check":false,"verbose":false}
+┌─────────┬─────────┬───────────────┬────────┬───────┬────┬─────────┬──────────┬──────────┬────────┬──────────┬───────┬─────────┬──────────┬──────────┬────────┬────────────┬──────────┬──────────────────┬───────┐
+│ (index) │ db      │ mode          │ buyers │ stock │ ok │ soldOut │ deadlock │ conflict │ failed │ checkErr │ other │ retries │ dlEvents │ cfEvents │ orders │ finalStock │ oversold │ verdict          │ ms    │
+├─────────┼─────────┼───────────────┼────────┼───────┼────┼─────────┼──────────┼──────────┼────────┼──────────┼───────┼─────────┼──────────┼──────────┼────────┼────────────┼──────────┼──────────────────┼───────┤
+│ 0       │ 'MSSQL' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 2          │ 45       │ 'LOST_UPDATE'    │ 397   │
+│ 1       │ 'MSSQL' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 2          │ 45       │ 'LOST_UPDATE'    │ 360   │
+│ 2       │ 'MSSQL' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 3          │ 45       │ 'LOST_UPDATE'    │ 333   │
+│ 3       │ 'MSSQL' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 2          │ 45       │ 'LOST_UPDATE'    │ 446   │
+│ 4       │ 'MSSQL' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 2          │ 45       │ 'LOST_UPDATE'    │ 317   │
+│ 5       │ 'MSSQL' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 3          │ 45       │ 'LOST_UPDATE'    │ 276   │
+│ 6       │ 'MSSQL' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 2          │ 45       │ 'LOST_UPDATE'    │ 293   │
+│ 7       │ 'MSSQL' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 2          │ 45       │ 'LOST_UPDATE'    │ 283   │
+│ 8       │ 'MSSQL' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 2          │ 45       │ 'LOST_UPDATE'    │ 396   │
+│ 9       │ 'MSSQL' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 3          │ 45       │ 'LOST_UPDATE'    │ 229   │
+│ 10      │ 'MSSQL' │ 'ATOMIC'      │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 117   │
+│ 11      │ 'MSSQL' │ 'ATOMIC'      │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 114   │
+│ 12      │ 'MSSQL' │ 'ATOMIC'      │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 118   │
+│ 13      │ 'MSSQL' │ 'ATOMIC'      │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 101   │
+│ 14      │ 'MSSQL' │ 'ATOMIC'      │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 132   │
+│ 15      │ 'MSSQL' │ 'ATOMIC'      │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 172   │
+│ 16      │ 'MSSQL' │ 'ATOMIC'      │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 107   │
+│ 17      │ 'MSSQL' │ 'ATOMIC'      │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 711   │
+│ 18      │ 'MSSQL' │ 'ATOMIC'      │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 128   │
+│ 19      │ 'MSSQL' │ 'ATOMIC'      │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 103   │
+│ 20      │ 'MSSQL' │ 'UPDLOCK'     │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 96    │
+│ 21      │ 'MSSQL' │ 'UPDLOCK'     │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 87    │
+│ 22      │ 'MSSQL' │ 'UPDLOCK'     │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 97    │
+│ 23      │ 'MSSQL' │ 'UPDLOCK'     │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 110   │
+│ 24      │ 'MSSQL' │ 'UPDLOCK'     │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 98    │
+│ 25      │ 'MSSQL' │ 'UPDLOCK'     │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 151   │
+│ 26      │ 'MSSQL' │ 'UPDLOCK'     │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 114   │
+│ 27      │ 'MSSQL' │ 'UPDLOCK'     │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 102   │
+│ 28      │ 'MSSQL' │ 'UPDLOCK'     │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 91    │
+│ 29      │ 'MSSQL' │ 'UPDLOCK'     │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 93    │
+│ 30      │ 'MSSQL' │ 'REPEATABLE'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 101     │ 101      │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 10944 │
+│ 31      │ 'MSSQL' │ 'REPEATABLE'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 98      │ 98       │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 1049  │
+│ 32      │ 'MSSQL' │ 'REPEATABLE'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 99      │ 99       │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 1023  │
+│ 33      │ 'MSSQL' │ 'REPEATABLE'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 99      │ 99       │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 983   │
+│ 34      │ 'MSSQL' │ 'REPEATABLE'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 97      │ 97       │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 1025  │
+│ 35      │ 'MSSQL' │ 'REPEATABLE'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 98      │ 98       │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 1056  │
+│ 36      │ 'MSSQL' │ 'REPEATABLE'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 99      │ 99       │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 1039  │
+│ 37      │ 'MSSQL' │ 'REPEATABLE'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 98      │ 98       │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 1047  │
+│ 38      │ 'MSSQL' │ 'REPEATABLE'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 98      │ 98       │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 1093  │
+│ 39      │ 'MSSQL' │ 'REPEATABLE'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 97      │ 97       │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 995   │
+│ 40      │ 'MSSQL' │ 'SNAPSHOT'    │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 58      │ 0        │ 58       │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 208   │
+│ 41      │ 'MSSQL' │ 'SNAPSHOT'    │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 56      │ 0        │ 56       │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 210   │
+│ 42      │ 'MSSQL' │ 'SNAPSHOT'    │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 52      │ 0        │ 52       │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 182   │
+│ 43      │ 'MSSQL' │ 'SNAPSHOT'    │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 53      │ 0        │ 53       │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 196   │
+│ 44      │ 'MSSQL' │ 'SNAPSHOT'    │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 54      │ 0        │ 54       │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 191   │
+│ 45      │ 'MSSQL' │ 'SNAPSHOT'    │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 53      │ 0        │ 53       │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 168   │
+│ 46      │ 'MSSQL' │ 'SNAPSHOT'    │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 52      │ 0        │ 52       │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 211   │
+│ 47      │ 'MSSQL' │ 'SNAPSHOT'    │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 52      │ 0        │ 52       │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 198   │
+│ 48      │ 'MSSQL' │ 'SNAPSHOT'    │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 52      │ 0        │ 52       │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 188   │
+│ 49      │ 'MSSQL' │ 'SNAPSHOT'    │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 50      │ 0        │ 50       │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 175   │
+│ 50      │ 'Neo4j' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 4          │ 45       │ 'LOST_UPDATE'    │ 1282  │
+│ 51      │ 'Neo4j' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 4          │ 45       │ 'LOST_UPDATE'    │ 872   │
+│ 52      │ 'Neo4j' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 4          │ 45       │ 'LOST_UPDATE'    │ 890   │
+│ 53      │ 'Neo4j' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 4          │ 45       │ 'LOST_UPDATE'    │ 922   │
+│ 54      │ 'Neo4j' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 4          │ 45       │ 'LOST_UPDATE'    │ 935   │
+│ 55      │ 'Neo4j' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 4          │ 45       │ 'LOST_UPDATE'    │ 770   │
+│ 56      │ 'Neo4j' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 4          │ 45       │ 'LOST_UPDATE'    │ 635   │
+│ 57      │ 'Neo4j' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 4          │ 45       │ 'LOST_UPDATE'    │ 600   │
+│ 58      │ 'Neo4j' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 4          │ 45       │ 'LOST_UPDATE'    │ 568   │
+│ 59      │ 'Neo4j' │ 'NAIVE'       │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 4          │ 45       │ 'LOST_UPDATE'    │ 644   │
+│ 60      │ 'Neo4j' │ 'SINGLE_STMT' │ 50     │ 5     │ 8  │ 42      │ 0        │ 0        │ 0      │ 0        │ 0     │ 585     │ 585      │ 0        │ 8      │ -3         │ 3        │ 'NEGATIVE_STOCK' │ 7435  │
+│ 61      │ 'Neo4j' │ 'SINGLE_STMT' │ 50     │ 5     │ 9  │ 37      │ 4        │ 0        │ 0      │ 0        │ 0     │ 741     │ 745      │ 0        │ 9      │ -4         │ 4        │ 'NEGATIVE_STOCK' │ 9139  │
+│ 62      │ 'Neo4j' │ 'SINGLE_STMT' │ 50     │ 5     │ 10 │ 40      │ 0        │ 0        │ 0      │ 0        │ 0     │ 144     │ 144      │ 0        │ 10     │ -5         │ 5        │ 'NEGATIVE_STOCK' │ 1888  │
+│ 63      │ 'Neo4j' │ 'SINGLE_STMT' │ 50     │ 5     │ 7  │ 43      │ 0        │ 0        │ 0      │ 0        │ 0     │ 242     │ 242      │ 0        │ 7      │ -2         │ 2        │ 'NEGATIVE_STOCK' │ 3019  │
+│ 64      │ 'Neo4j' │ 'SINGLE_STMT' │ 50     │ 5     │ 7  │ 43      │ 0        │ 0        │ 0      │ 0        │ 0     │ 283     │ 283      │ 0        │ 7      │ -2         │ 2        │ 'NEGATIVE_STOCK' │ 3539  │
+│ 65      │ 'Neo4j' │ 'SINGLE_STMT' │ 50     │ 5     │ 8  │ 42      │ 0        │ 0        │ 0      │ 0        │ 0     │ 319     │ 319      │ 0        │ 8      │ -3         │ 3        │ 'NEGATIVE_STOCK' │ 4037  │
+│ 66      │ 'Neo4j' │ 'SINGLE_STMT' │ 50     │ 5     │ 9  │ 41      │ 0        │ 0        │ 0      │ 0        │ 0     │ 351     │ 351      │ 0        │ 9      │ -4         │ 4        │ 'NEGATIVE_STOCK' │ 4340  │
+│ 67      │ 'Neo4j' │ 'SINGLE_STMT' │ 50     │ 5     │ 9  │ 41      │ 0        │ 0        │ 0      │ 0        │ 0     │ 127     │ 127      │ 0        │ 9      │ -4         │ 4        │ 'NEGATIVE_STOCK' │ 1782  │
+│ 68      │ 'Neo4j' │ 'SINGLE_STMT' │ 50     │ 5     │ 8  │ 42      │ 0        │ 0        │ 0      │ 0        │ 0     │ 304     │ 304      │ 0        │ 8      │ -3         │ 3        │ 'NEGATIVE_STOCK' │ 3760  │
+│ 69      │ 'Neo4j' │ 'SINGLE_STMT' │ 50     │ 5     │ 8  │ 42      │ 0        │ 0        │ 0      │ 0        │ 0     │ 296     │ 296      │ 0        │ 8      │ -3         │ 3        │ 'NEGATIVE_STOCK' │ 3674  │
+│ 70      │ 'Neo4j' │ 'LOCK_FIRST'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 895   │
+│ 71      │ 'Neo4j' │ 'LOCK_FIRST'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 480   │
+│ 72      │ 'Neo4j' │ 'LOCK_FIRST'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 701   │
+│ 73      │ 'Neo4j' │ 'LOCK_FIRST'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 598   │
+│ 74      │ 'Neo4j' │ 'LOCK_FIRST'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 576   │
+│ 75      │ 'Neo4j' │ 'LOCK_FIRST'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 501   │
+│ 76      │ 'Neo4j' │ 'LOCK_FIRST'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 499   │
+│ 77      │ 'Neo4j' │ 'LOCK_FIRST'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 467   │
+│ 78      │ 'Neo4j' │ 'LOCK_FIRST'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 433   │
+│ 79      │ 'Neo4j' │ 'LOCK_FIRST'  │ 50     │ 5     │ 5  │ 45      │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 5      │ 0          │ 0        │ 'CONSISTENT'     │ 418   │
+└─────────┴─────────┴───────────────┴────────┴───────┴────┴─────────┴──────────┴──────────┴────────┴──────────┴───────┴─────────┴──────────┴──────────┴────────┴────────────┴──────────┴──────────────────┴───────┘
+
+TỔNG HỢP theo chế độ (đưa vào báo cáo):
+┌─────────┬─────────┬───────────────┬──────┬─────────────┬───────┬─────────────┬─────────────┬─────────────┬──────────────┬───────┬──────────────────┐
+│ (index) │ db      │ mode          │ runs │ anomalyRuns │ avgOk │ avgOversold │ avgDeadlock │ avgConflict │ avgFinalFail │ avgMs │ verdicts         │
+├─────────┼─────────┼───────────────┼──────┼─────────────┼───────┼─────────────┼─────────────┼─────────────┼──────────────┼───────┼──────────────────┤
+│ 0       │ 'MSSQL' │ 'NAIVE'       │ 10   │ 10          │ 50    │ 45          │ 0           │ 0           │ 0            │ 333   │ 'LOST_UPDATE'    │
+│ 1       │ 'MSSQL' │ 'ATOMIC'      │ 10   │ 0           │ 5     │ 0           │ 0           │ 0           │ 0            │ 180   │ 'CONSISTENT'     │
+│ 2       │ 'MSSQL' │ 'UPDLOCK'     │ 10   │ 0           │ 5     │ 0           │ 0           │ 0           │ 0            │ 104   │ 'CONSISTENT'     │
+│ 3       │ 'MSSQL' │ 'REPEATABLE'  │ 10   │ 0           │ 5     │ 0           │ 98.4        │ 0           │ 0            │ 2025  │ 'CONSISTENT'     │
+│ 4       │ 'MSSQL' │ 'SNAPSHOT'    │ 10   │ 0           │ 5     │ 0           │ 0           │ 53.2        │ 0            │ 193   │ 'CONSISTENT'     │
+│ 5       │ 'Neo4j' │ 'NAIVE'       │ 10   │ 10          │ 50    │ 45          │ 0           │ 0           │ 0            │ 812   │ 'LOST_UPDATE'    │
+│ 6       │ 'Neo4j' │ 'SINGLE_STMT' │ 10   │ 10          │ 8.3   │ 3.3         │ 339.6       │ 0           │ 0.4          │ 4261  │ 'NEGATIVE_STOCK' │
+│ 7       │ 'Neo4j' │ 'LOCK_FIRST'  │ 10   │ 0           │ 5     │ 0           │ 0           │ 0           │ 0            │ 557   │ 'CONSISTENT'     │
+└─────────┴─────────┴───────────────┴──────┴─────────────┴───────┴─────────────┴─────────────┴─────────────┴──────────────┴───────┴──────────────────┘
+Cách đọc kết quả:
+  ok        số đơn commit thành công            soldOut   bị từ chối vì hết hàng (50003)
+  deadlock  người mua thất bại cuối cùng vì deadlock (1205 / Neo4j) – sau khi hết lượt retry
+  conflict  như trên với snapshot update conflict (3960)
+  dlEvents / cfEvents  tổng số LẦN gặp deadlock / conflict, kể cả lần đã retry
+  (bảng TỔNG HỢP: avgDeadlock / avgConflict = TB dlEvents / cfEvents; avgFinalFail = TB deadlock + conflict)
+  failed    sự cố giả lập sau khi trừ kho (--fail-every) – phải được rollback
+  checkErr  bị CHECK (stock_qty >= 0) chặn (547) other     lỗi khác (xem log)
+  oversold  số đơn vị bán VƯỢT tồn kho ban đầu
+  verdict   CONSISTENT | LOST_UPDATE | NEGATIVE_STOCK | LEAKED_STOCK
+  ms        tổng thời gian cả đợt – chỉ so sánh giữa các chế độ TRONG CÙNG một DBMS

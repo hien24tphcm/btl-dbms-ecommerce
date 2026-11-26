@@ -1,0 +1,35 @@
+# Demo Transaction & Concurrency Control (MSSQL vs Neo4j)
+# Bổ sung cho .gitignore gốc của repo (đã bỏ qua node_modules/, .env, CLAUDE.md, *.bak, *.trn ...)
+
+# Node.js
+node_modules/
+npm-debug.log*
+*.log
+
+# Biến môi trường cục bộ (đổi cổng / mật khẩu)
+.env
+.env.*
+
+# Dữ liệu container nếu ai đó đổi volume sang bind mount
+neo4j_data/
+mssql_data/
+
+# Sản phẩm biên dịch LaTeX của file báo cáo .tex
+*.aux
+*.out
+*.toc
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+*.pdf
+
+# Hệ điều hành / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Ảnh chụp minh họa nháp (ảnh dùng cho báo cáo nên đặt vào thư mục báo cáo chung)
+screenshots/
+
+# LƯU Ý: thư mục results/ được COMMIT có chủ đích – là log gốc của số liệu trong báo cáo.

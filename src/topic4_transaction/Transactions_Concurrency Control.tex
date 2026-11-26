@@ -1,0 +1,651 @@
+\subsection{Transactions \& Concurrency Control}
+\label{subsec:tx-cc}
+
+Mục này so sánh cơ chế giao dịch (transaction) và kiểm soát tương tranh (concurrency control) của Microsoft SQL Server 2022 và Neo4j 5.26 trong bối cảnh sàn thương mại điện tử đa gian hàng của nhóm. Phần lý thuyết và đặc trưng từng hệ (Mục~\ref{subsubsec:tx-concepts}--\ref{subsubsec:tx-neo4j}) được giữ ở mức đủ để giải thích kết quả thực nghiệm; phần thực nghiệm (Mục~\ref{subsubsec:tx-exp}) tập trung vào một nội dung trọng tâm: nhiều đơn checkout đồng thời trừ tồn kho của cùng một sản phẩm trong đợt Flash Sale (nguy cơ Lost Update và bán vượt tồn kho -- overselling).
+
+\textbf{Lý do chọn nội dung trọng tâm.} (1) Đây là nghiệp vụ lõi của hệ thống: thủ tục checkout (FR-04) và điều chỉnh tồn kho (FR-08) cùng ghi vào một ``hàng nóng'' (hot row) là số lượng tồn kho. (2) Hai DBMS khác nhau rõ nhất ở đúng điểm này: SQL Server có nhiều mức cô lập và gợi ý khóa khai báo sẵn, còn Neo4j chỉ có mức Read Committed kết hợp khóa ghi. (3) Kết quả kiểm chứng được bằng một bất biến định lượng (Mục~\ref{par:tx-invariant}), không phụ thuộc cảm nhận.
+
+\noindent\textcolor{red}{\textbf{Ghi chú cho nhóm (xóa trước khi nộp):} các đoạn in đỏ dạng [ĐIỀN/CHÈN/XÁC NHẬN \ldots] là chỗ cần bổ sung ảnh chụp, số liệu hoặc kiểm tra lại. Chỉ những số liệu nằm trong bảng ``đã đo'' mới lấy từ README của bộ demo; mọi chỗ khác đều được gắn nhãn ``kỳ vọng'' hoặc ``chưa đo''.}
+
+% ----------------------------------------------------------------------------
+\subsubsection{Khái niệm chung về Transactions \& Concurrency Control}
+\label{subsubsec:tx-concepts}
+
+\paragraph{Giao dịch và các tính chất ACID}\mbox{}
+
+Giao dịch là một đơn vị công việc logic gồm một hoặc nhiều thao tác đọc/ghi trên cơ sở dữ liệu và phải được thực hiện trọn vẹn hoặc không thực hiện gì cả [1]. Bảng~\ref{tab:tx-acid} gắn bốn tính chất ACID với thao tác checkout của hệ thống.
+
+\begin{table}[htbp]
+\centering
+\caption{ACID trong nghiệp vụ checkout}
+\label{tab:tx-acid}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{>{\bfseries}l X X}
+\toprule
+Tính chất & \textbf{Ý nghĩa} & \textbf{Biểu hiện trong checkout} \\
+\midrule
+Atomicity & Mọi thao tác của giao dịch cùng thành công hoặc cùng bị hủy. & Trừ tồn kho và tạo đơn hàng phải đi cùng nhau; nếu lỗi sau khi đã trừ kho thì kho phải được hoàn nguyên. \\
+Consistency & Giao dịch đưa CSDL từ trạng thái hợp lệ sang trạng thái hợp lệ. & Bất biến: tồn kho cuối + số lượng đã đặt = tồn kho ban đầu, và tồn kho $\ge 0$. \\
+Isolation & Các giao dịch đồng thời không làm sai lệch kết quả của nhau. & Hàng chục người mua cùng sản phẩm không được cùng ``thấy còn hàng'' rồi cùng trừ. \\
+Durability & Giao dịch đã commit thì không bị mất khi có sự cố. & Đơn đã báo thành công vẫn còn sau khi máy chủ khởi động lại. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Trạng thái của giao dịch}\mbox{}
+
+Theo mô hình lý thuyết, một giao dịch đi qua các trạng thái: \textit{Active} (đang thực thi) $\rightarrow$ \textit{Partially Committed} (đã chạy xong lệnh cuối, chuẩn bị ghi nhật ký) $\rightarrow$ \textit{Committed} (đã bền vững) $\rightarrow$ \textit{Terminated} (rời hệ thống). Từ \textit{Active} hoặc \textit{Partially Committed}, giao dịch có thể rẽ sang \textit{Failed} (gặp lỗi hoặc bị hủy) rồi mới sang \textit{Terminated} [1]. \textit{Failed} không phải là trạng thái kế tiếp của \textit{Committed}.
+
+\paragraph{Nhật ký, phục hồi và lịch biểu có thể phục hồi}\mbox{}
+
+Hầu hết DBMS dùng nhật ký ghi trước (Write-Ahead Logging -- WAL): bản ghi nhật ký phải xuống đĩa trước khi thay đổi tương ứng được coi là bền. Hai chính sách quản lý bộ đệm quyết định loại thông tin cần ghi trong nhật ký [1]:
+\begin{itemize}
+    \item \textbf{Steal} (cho phép ghi trang dữ liệu chưa commit xuống đĩa) $\Rightarrow$ nhật ký phải có thông tin \textit{Undo} (giá trị cũ) để hủy giao dịch khi cần. \textbf{No-Steal} thì không cần \textit{Undo}.
+    \item \textbf{No-Force} (không bắt buộc ghi trang dữ liệu xuống đĩa lúc commit) $\Rightarrow$ nhật ký phải có thông tin \textit{Redo} (giá trị mới) để làm lại giao dịch đã commit sau sự cố.
+\end{itemize}
+
+Về khả năng phục hồi, các lịch biểu được phân cấp từ \textit{Nonrecoverable} $\rightarrow$ \textit{Recoverable} $\rightarrow$ \textit{Cascadeless} (chỉ đọc dữ liệu đã commit, tránh cascading rollback) $\rightarrow$ \textit{Strict} (không đọc hoặc ghi đè dữ liệu $X$ cho đến khi giao dịch ghi $X$ trước đó đã commit hoặc abort). Giao thức khóa giữ khóa ghi đến hết giao dịch cho lịch biểu \textit{Strict}.
+
+\paragraph{Các bất thường do tương tranh}\mbox{}
+
+Khi các giao dịch đan xen mà không được kiểm soát, có thể phát sinh các bất thường sau:
+\begin{itemize}
+    \item \textbf{Lost Update:} hai giao dịch cùng đọc một giá trị rồi cùng ghi giá trị tính từ lần đọc đó, bản ghi sau ghi đè bản ghi trước. Ví dụ: tồn kho còn 1, hai người mua cùng đọc 1, cùng ghi 0 $\Rightarrow$ có 2 đơn nhưng kho chỉ giảm 1.
+    \item \textbf{Dirty Read:} đọc dữ liệu chưa commit của giao dịch khác (có thể sau đó bị hủy).
+    \item \textbf{Non-repeatable Read:} cùng một giao dịch đọc hai lần cùng dữ liệu nhưng thấy kết quả khác nhau.
+    \item \textbf{Phantom:} truy vấn lặp lại thấy thêm hoặc mất các dòng thỏa điều kiện do giao dịch khác chèn/xóa.
+    \item \textbf{Write Skew:} hai giao dịch đọc cùng một tập dữ liệu, mỗi giao dịch ghi một phần khác nhau dựa trên giả định đã đọc; có thể xảy ra ở Snapshot Isolation.
+\end{itemize}
+
+Ngoài ra, mẫu \textit{check-then-act} (kiểm tra điều kiện rồi mới hành động) là nguồn lỗi phổ biến: nếu việc kiểm tra (ví dụ ``còn hàng?'') dựa trên một giá trị đọc ra mà không được bảo vệ bằng khóa hay phiên bản, thì khi hành động diễn ra giá trị đó có thể đã cũ.
+
+\paragraph{Các cơ chế kiểm soát tương tranh}\mbox{}
+
+\begin{itemize}
+    \item \textbf{Khóa (locking, bi quan):} giao dịch xin khóa chia sẻ (S) khi đọc, khóa độc quyền (X) khi ghi; giao thức khóa hai pha nghiêm ngặt (Strict 2PL) giữ khóa ghi đến hết giao dịch và cho lịch biểu khả tuần tự xung đột [1]. Hệ quả: giao dịch có thể phải chờ, và có thể xảy ra deadlock (chờ vòng); DBMS phát hiện và chọn một giao dịch ``nạn nhân'' để hủy, ứng dụng phải thử lại.
+    \item \textbf{Đa phiên bản / lạc quan (row versioning):} người đọc đọc phiên bản đã commit tại một thời điểm, không chặn người ghi. Khi hai giao dịch ghi cùng một dòng, DBMS phát hiện xung đột và hủy một giao dịch (quy tắc ``người commit trước thắng''), ứng dụng phải thử lại.
+\end{itemize}
+
+Chuẩn SQL-92 định nghĩa bốn mức cô lập dựa trên ba hiện tượng; Snapshot là mở rộng ngoài chuẩn (Bảng~\ref{tab:tx-isolation}).
+
+\begin{table}[htbp]
+\centering
+\caption{Mức cô lập SQL-92 và hiện tượng có thể xảy ra}
+\label{tab:tx-isolation}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{l c c X}
+\toprule
+\textbf{Mức cô lập} & \textbf{Dirty Read} & \textbf{Non-repeatable Read} & \textbf{Phantom} \\
+\midrule
+\texttt{READ UNCOMMITTED} & Có thể & Có thể & Có thể \\
+\texttt{READ COMMITTED} & Không & Có thể & Có thể \\
+\texttt{REPEATABLE READ} & Không & Không & Có thể \\
+\texttt{SERIALIZABLE} & Không & Không & Không \\
+\texttt{SNAPSHOT} (ngoài chuẩn) & Không & Không & Không (đối với đọc) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Lưu ý:} bảng không có cột Lost Update vì chuẩn không liệt kê riêng. Trong thực tế, Lost Update vẫn xảy ra ở \texttt{READ COMMITTED} khi ứng dụng đọc rồi ghi giá trị đã tính; mức khóa giữ khóa đọc (\texttt{REPEATABLE READ}) hoặc cơ chế phát hiện xung đột ghi (\texttt{SNAPSHOT}) mới ngăn được, mỗi bên với một cái giá khác nhau (deadlock hoặc update conflict) -- chính là nội dung kiểm chứng ở Mục~\ref{subsubsec:tx-exp}.
+
+\paragraph{Bất biến dùng để kiểm chứng trong thực nghiệm}
+\label{par:tx-invariant}\mbox{}
+
+Mọi lần chạy thực nghiệm đều kết thúc bằng việc kiểm tra bất biến sau, giống nhau trên cả hai DBMS:
+\begin{equation}
+\label{eq:tx-invariant}
+\text{tồn kho cuối} + \sum(\text{số lượng các đơn đã tạo}) = \text{tồn kho ban đầu}, \quad \text{và} \quad \text{tồn kho cuối} \ge 0
+\end{equation}
+
+\begin{table}[htbp]
+\centering
+\caption{Phân loại kết quả kiểm chứng (verdict)}
+\label{tab:tx-verdict}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{>{\ttfamily}l l X}
+\toprule
+\normalfont\textbf{Verdict} & \textbf{Điều kiện} & \textbf{Ý nghĩa} \\
+\midrule
+CONSISTENT & Bất biến đúng & Không có bất thường. \\
+LOST\_UPDATE & $\text{tồn kho cuối} + \text{đã đặt} > \text{ban đầu}$ & Các giao dịch ghi đè lẫn nhau: bán nhiều hơn số đã trừ kho. \\
+NEGATIVE\_STOCK & $\text{tồn kho cuối} < 0$ & Việc kiểm tra ``còn hàng'' dựa trên giá trị cũ (check-then-act). \\
+LEAKED\_STOCK & $\text{tồn kho cuối} + \text{đã đặt} < \text{ban đầu}$ & Đã trừ kho nhưng không có đơn: vi phạm Atomicity. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ----------------------------------------------------------------------------
+\subsubsection{Đặc trưng cơ chế Transactions \& Concurrency Control trong MS SQL Server}
+\label{subsubsec:tx-mssql}
+
+\paragraph{Lưu trữ trạng thái giao dịch và phục hồi}\mbox{}
+
+\begin{itemize}
+    \item \textbf{Cập nhật tại chỗ trong Buffer Pool + WAL.} Giao dịch sửa trực tiếp các trang dữ liệu 8~KB trong Buffer Pool; bản ghi nhật ký phải được ghi xuống tệp log (\texttt{.ldf}) trước khi trang dữ liệu tương ứng được ghi xuống tệp dữ liệu [3].
+    \item \textbf{Steal / No-Force $\Rightarrow$ nhật ký Undo/Redo.} Do trang chưa commit có thể bị ghi xuống đĩa và trang đã commit chưa chắc đã xuống đĩa, bản ghi cập nhật dòng chứa đủ thông tin để làm lại và hoàn tác (ví dụ \texttt{LOP\_MODIFY\_ROW}; giao dịch bắt đầu và kết thúc có \texttt{LOP\_BEGIN\_XACT}, \texttt{LOP\_COMMIT\_XACT}, \texttt{LOP\_ABORT\_XACT}). Khi rollback, hệ thống còn ghi các bản ghi bù (compensation log records) cho thao tác hoàn tác.
+    \item \textbf{Phục hồi sự cố theo ARIES} gồm ba pha \textit{Analysis} $\rightarrow$ \textit{Redo} $\rightarrow$ \textit{Undo}. Từ SQL Server 2019, Accelerated Database Recovery (ADR) dùng kho phiên bản bền vững (PVS) để rút ngắn pha Undo [4].
+    \item \textbf{Độ bền:} mặc định giao dịch chỉ báo thành công sau khi bản ghi commit đã được ghi xuống đĩa (Fully Durable); có tùy chọn Delayed Durability để đổi một phần độ bền lấy thông lượng.
+    \item \textbf{Ràng buộc toàn vẹn} (\texttt{PRIMARY KEY}, \texttt{FOREIGN KEY}, \texttt{CHECK}, \texttt{UNIQUE}) được kiểm tra ngay tại từng câu lệnh (immediate), không đợi đến lúc \texttt{COMMIT}; SQL Server không có ràng buộc kiểu hoãn (deferred).
+\end{itemize}
+
+\paragraph{Chế độ giao dịch và xử lý lỗi}\mbox{}
+
+\begin{itemize}
+    \item \textbf{Autocommit (mặc định):} mỗi câu lệnh là một giao dịch. \textbf{Explicit:} \texttt{BEGIN TRANSACTION} \ldots{} \texttt{COMMIT}/\texttt{ROLLBACK}. \textbf{Implicit:} \texttt{SET IMPLICIT\_TRANSACTIONS ON}. Hỗ trợ savepoint bằng \texttt{SAVE TRANSACTION}/\texttt{ROLLBACK TRANSACTION <tên>}.
+    \item \texttt{SET XACT\_ABORT ON}: khi có lỗi thời gian chạy, toàn bộ giao dịch tự rollback. Nếu không bật, một số lỗi (như vi phạm \texttt{CHECK}) chỉ hủy câu lệnh hiện tại và giao dịch vẫn mở.
+    \item \texttt{TRY\ldots CATCH}, \texttt{XACT\_STATE()}, \texttt{THROW}: trong khối \texttt{CATCH}, \texttt{XACT\_STATE() = 1} nghĩa là còn commit được, \texttt{-1} là giao dịch không thể commit (phải \texttt{ROLLBACK}). Thủ tục demo dùng \texttt{THROW 50003} (hết hàng) và \texttt{THROW 50099} (sự cố giả lập) sau khi đã \texttt{ROLLBACK}/với \texttt{XACT\_ABORT}.
+\end{itemize}
+
+\paragraph{Khóa, mức cô lập và deadlock}\mbox{}
+
+\begin{itemize}
+    \item \textbf{Các chế độ khóa chính:} Shared (S), Update (U), Exclusive (X), cùng khóa ý định (IS, IX) và khóa dải khóa (Key-Range) cho mức \texttt{SERIALIZABLE}. Khóa U dùng khi đọc với ý định ghi: tại một thời điểm chỉ một giao dịch giữ U trên cùng tài nguyên, nên các giao dịch ``đọc-để-ghi'' xếp hàng thay vì cùng giữ S rồi cùng đòi X [2].
+    \item \textbf{Năm mức cô lập:} \texttt{READ UNCOMMITTED}, \texttt{READ COMMITTED} (mặc định, dùng khóa; hoặc dạng đa phiên bản RCSI khi bật \texttt{READ\_COMMITTED\_SNAPSHOT}, mặc định trên Azure SQL Database), \texttt{REPEATABLE READ} (giữ khóa S đến hết giao dịch), \texttt{SERIALIZABLE} (thêm khóa dải) và \texttt{SNAPSHOT} [2][8].
+    \item \texttt{SNAPSHOT} cần bật ở mức CSDL (\texttt{ALLOW\_SNAPSHOT\_ISOLATION ON}); giao dịch đọc phiên bản dữ liệu tại thời điểm bắt đầu. Khi ghi vào dòng đã bị giao dịch khác sửa sau thời điểm đó, câu lệnh ghi đầu tiên bị chặn bởi khóa X của giao dịch kia; nếu giao dịch kia commit, giao dịch này bị hủy với lỗi \texttt{3960} (update conflict) [9]. Snapshot không ngăn được Write Skew.
+    \item \textbf{Gợi ý khóa:} \texttt{WITH (UPDLOCK, ROWLOCK)} yêu cầu khóa U mức dòng và giữ đến hết giao dịch.
+    \item \textbf{Deadlock:} bộ giám sát khóa phát hiện chu trình chờ, chọn một nạn nhân, hủy giao dịch đó và trả lỗi \texttt{1205}. Mặc định không có thời gian chờ khóa (\texttt{LOCK\_TIMEOUT = -1}, chờ vô hạn). Khi một giao dịch giữ quá nhiều khóa (ngưỡng khoảng 5.000), SQL Server có thể nâng cấp (lock escalation) lên khóa cả bảng.
+\end{itemize}
+
+\paragraph{Ánh xạ các cơ chế vào bộ demo}\mbox{}
+
+Thủ tục \texttt{dbo.demo\_Checkout} (tệp \texttt{mssql\_flashsale\_demo.sql}) cài đặt năm chế độ, tất cả đều có cùng luồng nghiệp vụ: đọc/kiểm tra tồn kho $\rightarrow$ ``xử lý'' (tham số \texttt{@think\_ms}) $\rightarrow$ trừ kho $\rightarrow$ tạo đơn. Bảng~\ref{tab:tx-mssql-modes} nêu cơ chế và kỳ vọng theo lý thuyết (chưa phải kết quả đo).
+
+\begin{table}[htbp]
+\centering
+\caption{Các chế độ checkout trên SQL Server}
+\label{tab:tx-mssql-modes}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{>{\ttfamily}l X X}
+\toprule
+\normalfont\textbf{Chế độ} & \textbf{Cơ chế T-SQL} & \textbf{Kỳ vọng theo lý thuyết} \\
+\midrule
+NAIVE & \texttt{READ COMMITTED}; \texttt{SELECT} tồn kho $\rightarrow$ tính ở ``ứng dụng'' $\rightarrow$ \texttt{UPDATE SET stock\_qty = @stock - @qty}. & \texttt{LOST\_UPDATE}: khóa S nhả ngay sau khi đọc nên nhiều giao dịch cùng thấy một giá trị. \\
+ATOMIC & Một câu \texttt{UPDATE \ldots{} SET stock\_qty = stock\_qty - @qty WHERE product\_id = @id AND stock\_qty >= @qty}; \texttt{@@ROWCOUNT = 0} $\Rightarrow$ \texttt{THROW 50003}. & Đúng: khóa U/X được lấy trước khi đánh giá điều kiện; giao dịch sau phải chờ. \\
+UPDLOCK & \texttt{SELECT \ldots{} WITH (UPDLOCK, ROWLOCK)} rồi \texttt{UPDATE} (giống mô tả \texttt{sp\_CheckoutOrder}). & Đúng: các giao dịch xếp hàng trên khóa U. \\
+REPEATABLE & \texttt{SET TRANSACTION ISOLATION LEVEL REPEATABLE READ}; đọc rồi ghi. & Đúng nhưng deadlock chuyển đổi khóa (cùng giữ S rồi cùng đòi X) $\Rightarrow$ lỗi \texttt{1205}. \\
+SNAPSHOT & \texttt{SET TRANSACTION ISOLATION LEVEL SNAPSHOT}; đọc rồi ghi. & Đúng nhưng nhiều giao dịch bị hủy với lỗi \texttt{3960}. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Ngoài ra: ràng buộc \texttt{CK\_Demo\_Product\_stock CHECK (stock\_qty >= 0)} có thể bật bằng tham số \texttt{@with\_check} của \texttt{dbo.demo\_Reset}; tham số \texttt{@fail\_after\_write} ném lỗi \texttt{50099} sau khi đã trừ kho để kiểm chứng Atomicity; thủ tục \texttt{dbo.demo\_Verify} kiểm tra bất biến ở Mục~\ref{par:tx-invariant}.
+
+\paragraph{Giám sát và quản trị}\mbox{}
+
+\begin{itemize}
+    \item Giao dịch và khóa đang tồn tại: \texttt{sys.dm\_tran\_active\_transactions}, \texttt{sys.dm\_tran\_locks}; yêu cầu bị chặn và nguồn chặn: \texttt{sys.dm\_exec\_requests} (cột \texttt{wait\_type}, \texttt{blocking\_session\_id}); \texttt{DBCC OPENTRAN}.
+    \item Hủy phiên treo: \texttt{KILL <session\_id>} (rollback giao dịch của phiên). Đồ thị deadlock được ghi trong phiên Extended Events \texttt{system\_health} (sự kiện \texttt{xml\_deadlock\_report}).
+    \item Giao dịch phân tán giữa nhiều máy chủ dùng MS DTC với giao thức cam kết hai pha (2PC) qua \texttt{BEGIN DISTRIBUTED TRANSACTION}. Nội dung này nằm ngoài phạm vi demo (một máy chủ).
+\end{itemize}
+
+% ----------------------------------------------------------------------------
+\subsubsection{Đặc trưng cơ chế Transactions \& Concurrency Control trong Neo4j}
+\label{subsubsec:tx-neo4j}
+
+Các nhận định về Neo4j trong mục này dựa trên Operations Manual (bản ``current'') [5][6][7]; bộ demo chạy Neo4j 5.26 Community. Hành vi khóa có thể khác nhau giữa các phiên bản, nên các kết luận thực nghiệm chỉ áp dụng cho phiên bản đã chạy.
+
+\paragraph{Lưu trữ trạng thái giao dịch và phục hồi}\mbox{}
+
+\begin{itemize}
+    \item \textbf{Thay đổi được giữ trong bộ nhớ cho đến khi commit.} Tài liệu nêu rõ mọi sửa đổi trong một giao dịch được giữ trong bộ nhớ, vì vậy cập nhật rất lớn phải chia thành nhiều giao dịch để tránh hết bộ nhớ [5]. Tương ứng với lý thuyết, đây là hành vi kiểu \textit{No-Steal} (dữ liệu chưa commit không bị ghi xuống kho lưu trữ), nên rollback chỉ cần bỏ trạng thái trong bộ nhớ.
+    \item \textbf{Nhật ký giao dịch} ghi lại mọi thao tác ghi của CSDL và là ``nguồn sự thật'' khi phục hồi [10]. Sau sự cố, Neo4j phát lại (replay) các giao dịch chưa được xác nhận là đã ghi xuống kho lưu trữ, bắt đầu từ checkpoint gần nhất [7]. Việc nhật ký không cần lưu giá trị cũ là suy luận của nhóm từ cơ chế No-Steal và replay, không phải câu chữ trực tiếp của tài liệu.
+    \item \textbf{Checkpoint và dọn nhật ký:} mặc định checkpoint theo chu kỳ 15 phút hoặc 100.000 giao dịch; chính sách giữ nhật ký mặc định là ``2 days 2G'' [7][10].
+    \item \textbf{Ràng buộc xóa:} không thể commit khi còn quan hệ gắn vào nút đã xóa; lỗi xảy ra tại thời điểm commit [6]. Nên dùng \texttt{DETACH DELETE} khi cần xóa cả quan hệ.
+    \item \textbf{Cụm (cluster):} ghi được nhân bản đồng bộ qua giao thức Raft, chỉ commit khi đa số thành viên xác nhận; bookmark giúp đọc lại dữ liệu vừa ghi (read-your-writes) trên các bản sao [5]. Demo chỉ dùng một máy chủ đơn nên không kiểm chứng phần này.
+\end{itemize}
+
+\paragraph{Chế độ giao dịch}\mbox{}
+
+\begin{itemize}
+    \item \textbf{Auto-commit:} mỗi truy vấn gửi lẻ là một giao dịch. Giao dịch tường minh không viết được bằng Cypher thuần: phải dùng Driver API hoặc lệnh của \texttt{cypher-shell} (\texttt{:begin}, \texttt{:commit}, \texttt{:rollback}; Neo4j Browser không hỗ trợ các lệnh này).
+    \item \textbf{Managed transaction} (\texttt{session.executeWrite}) tự thử lại các lỗi tạm thời (transient) như deadlock; \textbf{unmanaged} (\texttt{session.beginTransaction}) thì ứng dụng tự quản lý. Runner của nhóm dùng unmanaged để tắt cơ chế thử lại ngầm, giúp chính sách thử lại (\texttt{--retry}) giống hệt với phía SQL Server.
+    \item Neo4j không có savepoint; giao dịch chỉ có commit toàn bộ hoặc rollback toàn bộ. Thao tác schema (tạo constraint, index) được thực hiện ở phiên riêng, tách khỏi giao dịch dữ liệu.
+    \item Neo4j không có ràng buộc miền giá trị kiểu \texttt{CHECK}; các loại constraint hiện có là \texttt{UNIQUE}, \texttt{EXISTS} (tồn tại thuộc tính), \texttt{TYPE} (kiểu thuộc tính) và \texttt{KEY}.
+\end{itemize}
+
+\paragraph{Khóa, mức cô lập và deadlock}\mbox{}
+
+\begin{itemize}
+    \item \textbf{Chỉ có mức Read Committed.} Giao dịch chỉ thấy dữ liệu đã commit; giao dịch đọc không chặn giao dịch ghi và ngược lại, vì đọc không lấy khóa. Chỉ khóa ghi được lấy và giữ đến hết giao dịch, nên Non-repeatable Read có thể xảy ra [6]. Tính ``khả tuần tự'' chỉ có thể mô phỏng bằng khóa tường minh: nếu mọi giao dịch cùng khóa ghi một nút chung thì chúng bị tuần tự hóa trên khóa đó [6].
+    \item \textbf{Khóa tự động:} thêm/sửa/xóa thuộc tính của nút lấy khóa ghi trên nút đó; tạo hoặc xóa quan hệ lấy khóa trên chính quan hệ và cả hai nút đầu mút (với nút ``thưa''; nút ``dày'' -- từ khoảng 50 quan hệ trở lên -- dùng loại khóa khác) [6].
+    \item \textbf{Khi nào Cypher tự khóa trước khi đọc:} nếu vế phải của \texttt{SET} phụ thuộc trực tiếp vào thuộc tính đang đọc (ví dụ \texttt{SET n.prop = n.prop + 1}), Cypher tự lấy khóa ghi trước khi đọc thuộc tính, nhờ đó phép cộng không mất cập nhật. Nếu không có phụ thuộc trực tiếp (ví dụ giá trị được đọc ở câu lệnh trước rồi truyền vào), Cypher không tự khóa và có thể mất cập nhật [6].
+    \item \textbf{Khóa tường minh:} mẹo được tài liệu nêu là ghi một thuộc tính tạm (ví dụ \texttt{SET n.\_lock = true}) để lấy khóa ghi trước khi đọc giá trị cần dùng, có thể xóa thuộc tính ngay sau đó [6]. Thư viện APOC cũng có thủ tục khóa nút.
+    \item \textbf{Deadlock:} khi phát hiện, giao dịch bị kết thúc với lỗi tạm thời \texttt{Neo.TransientError.Transaction.DeadlockDetected}; tài liệu khuyên thử lại có giới hạn và có khoảng nghỉ giữa các lần [6]. Thông điệp lỗi liệt kê tài nguyên bị khóa, rất hữu ích để chẩn đoán.
+    \item \textbf{Giới hạn mặc định:} thời gian chờ khóa (\texttt{db.lock.acquisition.timeout}) và thời gian tối đa của giao dịch (\texttt{db.transaction.timeout}) đều mặc định bằng 0, nghĩa là tắt; số giao dịch đồng thời tối đa mặc định là 1000 (\texttt{db.transaction.concurrent.maximum}) [5][6].
+\end{itemize}
+
+\paragraph{Ánh xạ các cơ chế vào bộ demo}\mbox{}
+
+Mô hình đồ thị tương đương: \texttt{(:Buyer)-[:PLACED]->(:Order)-[:FOR]->(:Product \{stock, initialStock\})}. Runner mở giao dịch unmanaged qua Bolt, cùng luồng nghiệp vụ như phía SQL Server (Bảng~\ref{tab:tx-neo4j-modes}).
+
+\begin{table}[htbp]
+\centering
+\caption{Các chế độ checkout trên Neo4j}
+\label{tab:tx-neo4j-modes}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{>{\ttfamily}l X X}
+\toprule
+\normalfont\textbf{Chế độ} & \textbf{Cơ chế Cypher} & \textbf{Kỳ vọng theo tài liệu} \\
+\midrule
+NAIVE & Đọc \texttt{p.stock} ở một câu lệnh, tính ở ứng dụng, rồi \texttt{SET p.stock = \$newStock}. & \texttt{LOST\_UPDATE}: giá trị ghi không phụ thuộc trực tiếp vào thuộc tính đang đọc nên không có khóa tự động. \\
+SINGLE\_STMT & \texttt{MATCH (p) WHERE p.stock >= \$qty SET p.stock = p.stock - \$qty}, sau đó tạo đơn. & \texttt{SET} có phụ thuộc trực tiếp nên khóa trước khi đọc phép trừ; nhưng \texttt{WHERE} được đánh giá lúc đọc, chưa có khóa $\Rightarrow$ nguy cơ \texttt{NEGATIVE\_STOCK}. \\
+LOCK\_FIRST & \texttt{SET p.\_lock = true} (lấy khóa ghi) $\rightarrow$ đọc $\rightarrow$ kiểm tra $\rightarrow$ \texttt{SET p.stock = p.stock - \$qty REMOVE p.\_lock}. & Đúng: các giao dịch xếp hàng trên khóa ghi của nút \texttt{Product}. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Neo4j không có tương đương với \texttt{REPEATABLE READ}, \texttt{SNAPSHOT} hay \texttt{CHECK}, nên các kịch bản liên quan chỉ chạy trên SQL Server (Mục~\ref{par:tx-kb4}, \ref{par:tx-kb5}).
+
+\paragraph{Giám sát và quản trị}\mbox{}
+
+\begin{itemize}
+    \item \texttt{SHOW TRANSACTIONS} liệt kê giao dịch đang chạy (cột \texttt{status} cho biết giao dịch đang bị chặn bởi giao dịch nào); \texttt{TERMINATE TRANSACTIONS} hủy một giao dịch mà không đứt kết nối của người dùng.
+    \item \texttt{CALL dbms.listActiveLocks(<queryId>)} (quyền quản trị) liệt kê khóa mà một truy vấn đang giữ; \texttt{queryId} lấy từ cột \texttt{currentQueryId} của \texttt{SHOW TRANSACTIONS} [6].
+\end{itemize}
+
+% ----------------------------------------------------------------------------
+\subsubsection{Kịch bản so sánh thực tế giữa SQL Server và Neo4j}
+\label{subsubsec:tx-exp}
+
+\paragraph{Môi trường và phương pháp thực nghiệm}
+\label{par:tx-env}\mbox{}
+
+Toàn bộ mã nguồn nằm trong một thư mục demo độc lập, không đụng đến CSDL của ứng dụng (\texttt{ECommerceDB}), gồm: \texttt{docker-compose.yml}, \texttt{mssql\_flashsale\_demo.sql}, \texttt{neo4j\_flashsale\_demo.cypher}, \texttt{run\_flashsale.mjs}, \texttt{setup\_mssql.mjs} [11].
+
+\begin{table}[htbp]
+\centering
+\caption{Môi trường thực nghiệm}
+\label{tab:tx-env}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{>{\bfseries}l X}
+\toprule
+Thành phần & \textbf{Cấu hình} \\
+\midrule
+Hạ tầng & Docker Compose trên một máy (Windows 11, Docker Desktop). Compose không đặt giới hạn CPU/RAM cho hai container. \\
+SQL Server & \texttt{mcr.microsoft.com/mssql/server:2022-latest}, bản Developer; CSDL riêng \texttt{TxDemoDB}, bật \texttt{ALLOW\_SNAPSHOT\_ISOLATION}; RCSI mặc định tắt. \\
+Neo4j & \texttt{neo4j:5.26-community}; heap 512~MB--1~GB, page cache 256~MB; không đặt thời gian chờ khóa (mặc định vô hạn, giống \texttt{LOCK\_TIMEOUT -1} của SQL Server). \\
+Trình chạy & Node.js $\ge 18$, thư viện \texttt{mssql} và \texttt{neo4j-driver}. Mỗi ``người mua'' là một kết nối/phiên riêng. Neo4j dùng giao dịch unmanaged; chính sách thử lại (\texttt{--retry}) áp dụng giống nhau cho cả hai DBMS với khoảng nghỉ ngẫu nhiên 20--80~ms. \\
+Dữ liệu & Một sản phẩm, tồn kho ban đầu nhỏ (1 cho kịch bản thủ công, 5 cho đo tự động). \\
+Tham số đo chính & 50 người mua đồng thời, tồn kho 5, \texttt{--think 0}, \texttt{--retry 20}, lặp 10 lần mỗi chế độ. Kịch bản thủ công dùng \texttt{think = 5000~ms} để nới rộng cửa sổ race. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Quy trình mỗi lần chạy:} đặt lại dữ liệu $\rightarrow$ cho $N$ người mua cùng checkout $\rightarrow$ kiểm tra bất biến~\eqref{eq:tx-invariant} $\rightarrow$ ghi nhận số đơn thành công, hết hàng, deadlock, conflict, sự cố giả lập, vi phạm \texttt{CHECK} và thời gian. Mỗi người mua chỉ mua một đơn (\texttt{qty = 1}). Nhóm lặp mỗi chế độ nhiều lần vì race condition không tất định.
+
+\textbf{Về tính công bằng.} Hai DBMS được chạy trên cùng máy, cùng trình chạy, cùng số người mua, tồn kho, độ trễ xử lý và chính sách thử lại, và được kiểm tra bằng cùng một bất biến. Do đó tính đúng đắn (verdict) và loại lỗi nhận được có thể so sánh giữa hai DBMS. Ngược lại, cột thời gian (ms) chỉ so sánh giữa các chế độ trong cùng một DBMS, vì khác giao thức và driver (TDS và Bolt), khác số lần gọi mạng cho mỗi giao dịch (SQL Server gọi một thủ tục, Neo4j gửi nhiều câu lệnh) và khác cách quản lý bộ nhớ.
+
+\textbf{Quy ước gắn nhãn:} ``Đã đo'' = số liệu từ bảng kết quả của bộ demo (đo lại ngày 26/11/2026 bằng phiên bản mã nguồn nộp kèm; log gốc lưu trong thư mục \texttt{results/} của bộ demo [11]); ``Kỳ vọng'' = suy ra từ cơ chế đã nêu ở Mục~\ref{subsubsec:tx-mssql}--\ref{subsubsec:tx-neo4j}, chưa có số liệu; chỗ in đỏ = cần nhóm bổ sung.
+
+\paragraph{Kịch bản 1: Lost Update khi đọc -- tính -- ghi (chế độ NAIVE)}
+\label{par:tx-kb1}\mbox{}
+
+\textbf{Mục tiêu.} Chứng minh rằng mức cô lập mặc định của cả hai DBMS không đủ để bảo vệ mẫu ``đọc tồn kho, tính ở ứng dụng, ghi lại''.
+
+\textbf{Thao tác thủ công} (kho còn 1 sản phẩm, hai người mua A và B).
+\begin{lstlisting}[basicstyle=\ttfamily\small, breaklines=true, frame=single]
+-- SQL Server (hai cua so, chay cach nhau < 5 giay)
+EXEC dbo.demo_Reset @product_id = 1, @stock = 1;
+EXEC dbo.demo_Checkout @product_id=1, @buyer_id=1, @mode='NAIVE', @think_ms=5000; -- cua so A
+EXEC dbo.demo_Checkout @product_id=1, @buyer_id=2, @mode='NAIVE', @think_ms=5000; -- cua so B
+EXEC dbo.demo_Verify @product_id = 1;
+
+// Neo4j (cypher-shell, hai terminal)
+// A: :begin -> MATCH (p:Product {id:1}) RETURN p.stock; // 1
+// B: :begin -> doc 1 -> SET p.stock = $newStock (=0) + CREATE don -> :commit
+// A: SET p.stock = $newStock (=0) + CREATE don -> :commit
+\end{lstlisting}
+
+\textbf{Kết quả mong đợi (thủ công).} Cả hai giao dịch đều thành công: 2 đơn, tồn kho cuối 0, tồn kho ban đầu 1 $\Rightarrow$ \texttt{LOST\_UPDATE}, bán vượt 1 đơn vị. \textcolor{red}{\textbf{[CHÈN ẢNH: kết quả \texttt{demo\_Verify} trên SSMS và truy vấn kiểm chứng trên \texttt{cypher-shell}]}}
+
+\textbf{Trạng thái số liệu:} Đã đo (tự động, 50 người mua, tồn kho 5).
+
+\begin{table}[htbp]
+\centering
+\caption{Kết quả đo Kịch bản 1 (NAIVE)}
+\label{tab:tx-kb1}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{l l c c c c X}
+\toprule
+\textbf{DBMS} & \textbf{Chế độ} & \textbf{Lần bất thường} & \textbf{TB đơn OK} & \textbf{TB oversold} & \textbf{TB ms} & \textbf{Verdict} \\
+\midrule
+MSSQL & \texttt{NAIVE} & 10/10 & 50 & 45 & 333 & \texttt{LOST\_UPDATE} \\
+Neo4j & \texttt{NAIVE} & 10/10 & 50 & 45 & 812 & \texttt{LOST\_UPDATE} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Phân tích.} Trên SQL Server, \texttt{READ COMMITTED} nhả khóa S ngay sau khi đọc nên nhiều giao dịch cùng thấy tồn kho 5; đến bước ghi, chúng lần lượt lấy khóa X và mỗi giao dịch ghi giá trị \texttt{@stock - @qty} tính từ lần đọc cũ. Trên Neo4j, đọc không lấy khóa và giá trị ghi (\texttt{\$newStock}) được tính ở ứng dụng, tức không có phụ thuộc trực tiếp vào thuộc tính đang đọc, nên Cypher cũng không tự khóa trước khi đọc [6]. Kết quả: 50 đơn được tạo cho 5 sản phẩm, tức bán vượt 45 đơn vị.
+
+\textbf{Kết luận.} Hai DBMS cho cùng một bất thường. Nguyên nhân là mẫu đọc--tính--ghi ở tầng ứng dụng kết hợp với mức cô lập mặc định (Read Committed) của cả hai, không phải lỗi riêng của một DBMS.
+
+\paragraph{Kịch bản 2: Khóa bi quan tường minh (UPDLOCK trên SQL Server, LOCK\_FIRST trên Neo4j)}
+\label{par:tx-kb2}\mbox{}
+
+\textbf{Mục tiêu.} Kiểm chứng rằng lấy khóa ghi trước khi đọc tuần tự hóa các giao dịch trên hàng/nút tồn kho và loại bỏ bất thường, đồng thời quan sát giao dịch bị chặn.
+
+\textbf{Thao tác thủ công} (ba cửa sổ: A, B và C để quan sát).
+\begin{lstlisting}[basicstyle=\ttfamily\small, breaklines=true, frame=single]
+-- SQL Server: A va B chay @mode = 'UPDLOCK', @think_ms = 5000
+-- Cua so C (khi B dang cho):
+SELECT session_id, status, wait_type, wait_time, blocking_session_id
+FROM sys.dm_exec_requests WHERE blocking_session_id <> 0;
+SELECT request_session_id, resource_type, request_mode, request_status
+FROM sys.dm_tran_locks WHERE resource_database_id = DB_ID(N'TxDemoDB');
+
+// Neo4j: A :begin -> MATCH (p:Product {id:1}) SET p._lock = true; -> doc p.stock
+//        B :begin -> MATCH (p:Product {id:1}) SET p._lock = true; <- treo, cho khoa cua A
+//        C SHOW TRANSACTIONS; // status cua B cho biet dang bi chan boi giao dich cua A
+//        A SET p.stock = p.stock - 1 REMOVE p._lock + CREATE don -> :commit (B duoc nha khoa)
+//        B doc p.stock -> 0 -> :rollback
+\end{lstlisting}
+
+\textbf{Kết quả mong đợi (thủ công).} Giao dịch B chờ (SQL Server: kiểu chờ khóa cập nhật \texttt{LCK\_M\_U}) đến khi A commit; sau đó B thấy tồn kho 0 và bị từ chối (SQL Server: lỗi \texttt{50003}). Kết thúc: 1 đơn, tồn kho cuối 0, \texttt{CONSISTENT}. \textcolor{red}{\textbf{[CHÈN ẢNH: DMV bên SQL Server và \texttt{SHOW TRANSACTIONS} bên Neo4j]}}
+
+\textbf{Trạng thái số liệu:} Đã đo (tự động).
+
+\begin{table}[htbp]
+\centering
+\caption{Kết quả đo Kịch bản 2 (Khóa bi quan tường minh)}
+\label{tab:tx-kb2}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{l l c c c c X}
+\toprule
+\textbf{DBMS} & \textbf{Chế độ} & \textbf{Lần bất thường} & \textbf{TB đơn OK} & \textbf{TB oversold} & \textbf{TB ms} & \textbf{Verdict} \\
+\midrule
+MSSQL & \texttt{UPDLOCK} & 0/10 & 5 & 0 & 104 & \texttt{CONSISTENT} \\
+Neo4j & \texttt{LOCK\_FIRST} & 0/10 & 5 & 0 & 557 & \texttt{CONSISTENT} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Phân tích.} Trên SQL Server, gợi ý \texttt{UPDLOCK} lấy khóa U trên dòng và giữ đến hết giao dịch; các giao dịch ``đọc-để-ghi'' xếp hàng, người sau đọc được giá trị đã commit của người trước. Trên Neo4j, \texttt{SET p.\_lock = true} lấy khóa ghi trên nút \texttt{Product} trước khi đọc; các giao dịch xếp hàng trên khóa này và việc đọc sau khi có khóa thấy giá trị đã commit. Đúng 5 đơn được tạo trong cả hai trường hợp. Khác biệt nằm ở cách biểu đạt: SQL Server có gợi ý khóa khai báo sẵn, còn Neo4j phải dùng thuộc tính tạm -- một workaround do tài liệu chính thức nêu [6]. Cái giá chung là thông lượng trên hàng nóng bị giới hạn bởi thời gian giữ khóa.
+
+\textbf{Kết luận.} Cả hai đạt tính đúng đắn khi khóa trước khi đọc. SQL Server làm điều này tự nhiên hơn; Neo4j đòi hỏi lập trình viên biết và áp dụng đúng mẫu khóa tường minh.
+
+\paragraph{Kịch bản 3: Một câu lệnh có điều kiện (ATOMIC trên SQL Server, SINGLE\_STMT trên Neo4j)}
+\label{par:tx-kb3}\mbox{}
+
+\textbf{Mục tiêu.} Kiểm tra giả định phổ biến: ``gộp việc kiểm tra còn hàng và việc trừ kho vào một câu lệnh thì an toàn''. Đây là kịch bản cho thấy khác biệt lớn nhất giữa hai DBMS.
+
+\begin{lstlisting}[basicstyle=\ttfamily\small, breaklines=true, frame=single]
+-- SQL Server (ATOMIC)
+UPDATE dbo.Demo_Product SET stock_qty = stock_qty - @qty
+ WHERE product_id = @product_id AND stock_qty >= @qty;
+IF @@ROWCOUNT = 0 THROW 50003, 'Insufficient stock', 1;
+
+// Neo4j (SINGLE_STMT)
+MATCH (p:Product {id: $pid})
+WHERE p.stock >= $qty
+SET p.stock = p.stock - $qty
+RETURN p.stock AS stock
+// (khong co dong tra ve => het hang; don duoc tao o cau lenh ke tiep trong cung giao dich)
+\end{lstlisting}
+
+\textbf{Trạng thái số liệu:} Đã đo (tự động; 50 người mua, tồn kho 5, \texttt{--think 0}, lặp 10 lần; riêng thông điệp deadlock đo thêm với \texttt{--retry 0 --verbose}).
+
+\begin{table}[htbp]
+\centering
+\caption{Kết quả đo Kịch bản 3 (Một câu lệnh có điều kiện)}
+\label{tab:tx-kb3}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{l l c c c c X}
+\toprule
+\textbf{DBMS} & \textbf{Chế độ} & \textbf{Lần bất thường} & \textbf{TB đơn OK} & \textbf{TB oversold} & \textbf{TB ms} & \textbf{Verdict} \\
+\midrule
+MSSQL & \texttt{ATOMIC} & 0/10 & 5 & 0 & 180 & \texttt{CONSISTENT} \\
+Neo4j & \texttt{SINGLE\_STMT} (retry 20) & 10/10 & 8,3 & 3,3 & 4261 & \texttt{NEGATIVE\_STOCK} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Khi không thử lại (\texttt{--retry 0}), 46/50 giao dịch của Neo4j (92\%) bị hủy với lỗi \texttt{DeadlockDetected} trên nút \texttt{Product}, chỉ 4 đơn được tạo; các nạn nhân bị rollback nên kết quả kiểm chứng vẫn \texttt{CONSISTENT} (tồn kho cuối 1, 4 đơn). Khi có thử lại (\texttt{--retry 20}), trung bình mỗi lần chạy có 339,6 lần gặp deadlock (tính cả các lần đã thử lại); các giao dịch thử lại vượt qua điều kiện \texttt{WHERE} rồi trừ kho, dẫn đến tồn kho âm: trung bình 8,3 đơn được tạo cho 5 sản phẩm (bán vượt 3,3), cả 10/10 lần chạy đều \texttt{NEGATIVE\_STOCK}. Trung bình 0,4 người mua mỗi lần chạy vẫn thất bại sau khi dùng hết 20 lượt thử lại.
+
+\textbf{Phân tích.} Trên SQL Server, câu \texttt{UPDATE \ldots{} WHERE} lấy khóa trên dòng rồi mới đánh giá điều kiện, nên kiểm tra và hành động là một bước không thể chen ngang; các giao dịch sau bị chặn rồi thấy tồn kho đã hết và nhận lỗi \texttt{50003}. Trên Neo4j, tài liệu cho biết phép \texttt{p.stock - \$qty} có phụ thuộc trực tiếp nên được khóa trước khi đọc (không mất cập nhật), nhưng điều kiện \texttt{WHERE p.stock >= \$qty} được đánh giá lúc đọc, khi chưa có khóa [6]. Vì vậy nhiều giao dịch cùng vượt qua \texttt{WHERE} bằng giá trị cũ, rồi lần lượt lấy khóa và trừ tiếp, làm tồn kho âm. Đây là lỗi \textit{check-then-act} chứ không phải Lost Update, đúng với verdict \texttt{NEGATIVE\_STOCK} thay vì \texttt{LOST\_UPDATE}. \textcolor{red}{\textbf{[CHÈN ẢNH: kế hoạch \texttt{EXPLAIN} cho thấy toán tử \texttt{Filter (WHERE)} nằm trước \texttt{SetProperty}]}}
+
+\textbf{Về lỗi deadlock.} Thông điệp lỗi nguyên văn mà driver nhận được (chạy \texttt{--retry 0 --verbose}):
+\begin{lstlisting}[basicstyle=\ttfamily\footnotesize, breaklines=true, frame=single]
+Neo.TransientError.Transaction.DeadlockDetected
+ForsetiClient[transactionId=11118, clientId=997] can't acquire ExclusiveLock{owner=ForsetiClient[transactionId=11119, clientId=998]} on NODE(165) because holders of that lock are waiting for ForsetiClient[transactionId=11118, clientId=997].
+ Wait list:ExclusiveLock[
+Client[11119] waits for [ForsetiClient[transactionId=11118, clientId=997]]]
+\end{lstlisting}
+\texttt{NODE(165)} là nút \texttt{Product}. Giao dịch 11119 đang giữ khóa ghi (exclusive) trên nút này; giao dịch 11118 xin khóa ghi đó và phải chờ. Đồng thời 11119 lại đang chờ một khóa mà 11118 đã giữ, tạo thành chu trình chờ. Bộ quản lý khóa Forseti của Neo4j phát hiện chu trình và hủy 11118 [6]. Bản Community không có thủ tục liệt kê từng khóa (\texttt{db.listLocks}, \texttt{dbms.listActiveLocks}), nên nhóm xác định tài nguyên còn lại bằng các phép thử có đối chứng. Mỗi phép thử dùng 20 giao dịch đồng thời, mỗi giao dịch gồm câu lệnh thứ nhất (khác nhau giữa các dòng), nghỉ 200~ms, rồi tạo \texttt{Order} nối quan hệ \texttt{[:FOR]} tới \texttt{Product}:
+
+\begin{table}[htbp]
+\centering
+\caption{Phép thử xác định nguyên nhân deadlock trên Neo4j (lặp 3 lần, 20 giao dịch mỗi lần)}
+\label{tab:tx-deadlock-probe}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{X c c}
+\toprule
+\textbf{Câu lệnh thứ nhất} & \textbf{Số khóa của giao dịch đang chờ} & \textbf{Deadlock} \\
+\midrule
+\texttt{SET p.stock = 4} (giá trị tính ở ứng dụng, như \texttt{NAIVE}) & 2 & 0/60 \\
+\texttt{SET p.\_lock = true} (như \texttt{LOCK\_FIRST}) & 2 & 0/60 \\
+\texttt{SET p.stock = p.stock - 1} (phụ thuộc trực tiếp, không có \texttt{WHERE}) & 3 & 55/60 \\
+\texttt{WHERE p.stock >= 1 SET p.stock = p.stock - 1} (\texttt{SINGLE\_STMT}) & 3 & 50/60 \\
+\texttt{SINGLE\_STMT} nhưng câu sau tạo \texttt{Order} \emph{không} nối tới \texttt{Product} & -- & 0/20 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Số khóa được đọc từ cột \texttt{activeLockCount} của \texttt{SHOW TRANSACTIONS} khi giao dịch thứ hai đang bị chặn. Kết quả cho thấy deadlock \emph{không} do mệnh đề \texttt{WHERE} gây ra, mà do sự kết hợp của hai yếu tố:
+\begin{enumerate}
+    \item \textbf{Khóa tự động cho phụ thuộc trực tiếp.} Với \texttt{SET p.stock = p.stock - \ldots}, Cypher tự khóa nút trước khi đọc để tránh mất cập nhật [6]. Khi phải chờ, giao dịch này đã giữ nhiều hơn một khóa (3 so với 2) so với khi chờ ở \texttt{SET} thường.
+    \item \textbf{Tạo quan hệ tới chính nút đó.} Khi giao dịch đang giữ khóa nút \texttt{Product} tạo quan hệ \texttt{[:FOR]} tới nút này, nó cần thêm một khóa liên quan đến \texttt{Product} mà giao dịch đang chờ đã giữ. Bỏ quan hệ này thì không còn deadlock.
+\end{enumerate}
+Vì tất cả người mua đều chờ trên cùng một nút nóng, gần như mọi giao dịch đến sau đều thành nạn nhân, nên tỉ lệ bị hủy rất cao (92\% khi không thử lại). Loại tài nguyên cụ thể của khóa thứ ba không liệt kê được trên bản Community; đây là suy luận từ các phép thử chứ không phải quan sát trực tiếp. \texttt{LOCK\_FIRST} tránh được deadlock vì giao dịch đến sau bị chặn ngay ở \texttt{SET p.\_lock = true}, trước khi kịp giữ thêm khóa nào. Nhóm cũng đã loại trừ hiệu ứng nút ``dày'' (Mục~\ref{par:tx-summary}): trên nút \texttt{Product} mới tạo, tỉ lệ deadlock là 49/60, so với 50/60 trên nút đã từng có hơn 50 quan hệ.
+
+Tóm lại, \texttt{SINGLE\_STMT} có hai lỗi độc lập: \texttt{WHERE} đọc trước khi khóa gây \texttt{NEGATIVE\_STOCK} (lộ ra khi có thử lại), và khóa tự động của phép trừ kết hợp việc tạo quan hệ gây bão deadlock (lộ ra khi không thử lại).
+
+\textbf{Kết luận.} Với SQL Server, câu \texttt{UPDATE \ldots{} WHERE} có điều kiện là cách chống overselling đúng và đơn giản nhất. Với Neo4j, một câu Cypher có điều kiện không tương đương và không đủ an toàn; cần khóa ghi trước khi đọc (Kịch bản~2). Việc thử lại không làm giảm lỗi mà còn làm lộ lỗi, vì cho phép nhiều giao dịch hơn đi qua bước kiểm tra bằng giá trị cũ.
+
+\paragraph{Kịch bản 4: Mức cô lập cao hơn -- REPEATABLE READ và SNAPSHOT (chỉ SQL Server)}
+\label{par:tx-kb4}\mbox{}
+
+\textbf{Mục tiêu.} Quan sát hai chiến lược ngăn Lost Update mà SQL Server cung cấp và cái giá của chúng. Neo4j không có mức cô lập tương ứng (chỉ Read Committed); phương án thay thế của Neo4j chính là khóa tường minh ở Kịch bản~2.
+
+\textbf{Thao tác thủ công.} Reset tồn kho 5; hai cửa sổ A, B cùng chạy \texttt{demo\_Checkout} với \texttt{@mode = 'REPEATABLE'} rồi \texttt{'SNAPSHOT'}, \texttt{@think\_ms = 5000}.
+
+\textbf{Kết quả mong đợi (thủ công).} \texttt{REPEATABLE}: cả hai cùng giữ khóa S sau khi đọc rồi cùng đòi khóa X, tạo chu trình chờ; một cửa sổ nhận lỗi \texttt{1205} (nạn nhân deadlock), cửa sổ kia thành công. \texttt{SNAPSHOT}: câu \texttt{UPDATE} của giao dịch thứ hai bị chặn bởi khóa X của giao dịch thứ nhất; khi giao dịch thứ nhất commit, giao dịch thứ hai bị hủy với lỗi \texttt{3960} [9]. \textcolor{red}{\textbf{[CHÈN ẢNH: lỗi 1205 và 3960 trên SSMS]}}
+
+\textbf{Trạng thái số liệu:} Đã đo (tự động, có \texttt{--retry 20}). Số lần deadlock/conflict trung bình lấy từ bảng TỔNG HỢP của runner.
+
+\begin{table}[htbp]
+\centering
+\caption{Kết quả đo Kịch bản 4 (REPEATABLE READ và SNAPSHOT trên SQL Server)}
+\label{tab:tx-kb4}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{l l c c c c X}
+\toprule
+\textbf{DBMS} & \textbf{Chế độ} & \textbf{Lần bất thường} & \textbf{TB đơn OK} & \textbf{TB oversold} & \textbf{TB ms} & \textbf{Verdict} \\
+\midrule
+MSSQL & \texttt{REPEATABLE} & 0/10 & 5 & 0 & 2025 & \texttt{CONSISTENT} (nhiều deadlock, phải thử lại) \\
+MSSQL & \texttt{SNAPSHOT} & 0/10 & 5 & 0 & 193 & \texttt{CONSISTENT} (update conflict, phải thử lại) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Số deadlock (lỗi \texttt{1205}) trung bình mỗi lần chạy của \texttt{REPEATABLE}: \textbf{98,4}; số update conflict (lỗi \texttt{3960}) trung bình của \texttt{SNAPSHOT}: \textbf{53,2}. Các con số này đếm mọi lần giao dịch bị hủy, kể cả những lần sau đó thử lại thành công. Nghĩa là để bán được 5 sản phẩm cho 50 người mua, \texttt{REPEATABLE} phải hủy và chạy lại gần 100 giao dịch, \texttt{SNAPSHOT} khoảng 53. Không có người mua nào thất bại sau khi dùng hết lượt thử lại. Khi không thử lại (\texttt{--retry 0}), cả hai chế độ đều chỉ bán được 2/5 sản phẩm: 48/50 giao dịch bị hủy (lỗi \texttt{1205} với \texttt{REPEATABLE}, \texttt{3960} với \texttt{SNAPSHOT}), dữ liệu vẫn \texttt{CONSISTENT} nhưng còn tồn 3 sản phẩm. Thông điệp lỗi nguyên văn:
+\begin{lstlisting}[basicstyle=\ttfamily\footnotesize, breaklines=true, frame=single]
+Msg 1205: Transaction (Process ID 119) was deadlocked on lock resources with another process and has been chosen as the deadlock victim. Rerun the transaction.
+Msg 3960: Snapshot isolation transaction aborted due to update conflict. You cannot use snapshot isolation to access table 'dbo.Demo_Product' directly or indirectly in database 'TxDemoDB' to update, delete, or insert the row that has been modified or deleted by another transaction. Retry the transaction or change the isolation level for the update/delete statement.
+\end{lstlisting}
+
+\textbf{Phân tích.} Cả hai mức đều giữ được tính đúng đắn (10 lần chạy không có bất thường), nhưng phải trả giá bằng việc giao dịch bị hủy và thử lại. \texttt{REPEATABLE READ} dùng khóa nên các giao dịch tranh nhau nâng khóa S thành X và sinh deadlock; thời gian trung bình (2025~ms) cao hơn hẳn \texttt{UPDLOCK} (104~ms) trên cùng DBMS và cùng điều kiện. Lưu ý thời gian này đã gồm các khoảng nghỉ trước mỗi lần thử lại. \texttt{SNAPSHOT} không chặn người đọc nhưng bắt người ghi thử lại khi xung đột.
+
+\textbf{Kết luận.} SQL Server cho phép chọn chiến lược: bi quan (\texttt{UPDLOCK}/\texttt{ATOMIC}) hoặc lạc quan (\texttt{SNAPSHOT} kèm thử lại). Với hàng nóng như tồn kho Flash Sale, nhiều người cùng ghi một dòng nên chiến lược bi quan tránh được ``bão thử lại''. Neo4j chỉ có một lựa chọn là khóa tường minh.
+
+\paragraph{Kịch bản 5: Ràng buộc CHECK -- lớp phòng thủ khai báo (chỉ SQL Server)}
+\label{par:tx-kb5}\mbox{}
+
+\textbf{Mục tiêu.} Làm rõ phạm vi của ràng buộc \texttt{CHECK (stock\_qty >= 0)}: nó chặn được trạng thái tồn kho âm nhưng không thay thế cơ chế chống Lost Update. Neo4j không có ràng buộc miền giá trị; các constraint hiện có là \texttt{UNIQUE}, \texttt{EXISTS}, \texttt{TYPE} và \texttt{KEY}, nên không có kịch bản tương ứng.
+
+\begin{lstlisting}[basicstyle=\ttfamily\small, breaklines=true, frame=single]
+EXEC dbo.demo_Reset @product_id = 1, @stock = 1, @with_check = 1;
+-- chay lai Kich ban 1 (NAIVE), hoac: node run_flashsale.mjs --db mssql --mode NAIVE --check
+UPDATE dbo.Demo_Product SET stock_qty = -1 WHERE product_id = 1; -- loi 547
+\end{lstlisting}
+
+\textbf{Kết quả mong đợi.} \texttt{NAIVE} với \texttt{CHECK} vẫn cho \texttt{LOST\_UPDATE}, vì tồn kho không bị ghi thành số âm nên \texttt{CHECK} không bị vi phạm; ghi trực tiếp giá trị âm bị từ chối với lỗi \texttt{547}. Nghĩa là \texttt{CHECK} chặn lớp lỗi tương tự \texttt{NEGATIVE\_STOCK} (như đã thấy ở Neo4j \texttt{SINGLE\_STMT}) nhưng không chặn được \texttt{LOST\_UPDATE}.
+
+\textbf{Trạng thái số liệu:} Đã đo (\texttt{node run\_flashsale.mjs --db mssql --mode NAIVE --check}, cùng tham số với Bảng~\ref{tab:tx-summary}: 50 người mua, tồn kho 5, \texttt{--think 0}, \texttt{--retry 20}, lặp 10 lần).
+
+\begin{table}[htbp]
+\centering
+\caption{Kết quả đo Kịch bản 5 (\texttt{NAIVE} khi bật và tắt \texttt{CHECK})}
+\label{tab:tx-kb5}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{l c c c c c X}
+\toprule
+\textbf{Cấu hình} & \textbf{Lần bất thường} & \textbf{TB đơn OK} & \textbf{TB oversold} & \textbf{Lỗi 547} & \textbf{TB ms} & \textbf{Verdict} \\
+\midrule
+\texttt{NAIVE}, tắt \texttt{CHECK} & 10/10 & 50 & 45 & 0 & 333 & \texttt{LOST\_UPDATE} \\
+\texttt{NAIVE}, bật \texttt{CHECK} & 10/10 & 50 & 45 & 0 & 289 & \texttt{LOST\_UPDATE} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Bật \texttt{CHECK} không thay đổi kết quả: trong cả 10 lần chạy, ràng buộc không bị vi phạm lần nào (0 lỗi \texttt{547}), vì mỗi giao dịch ghi giá trị \texttt{@stock - 1} tính từ lần đọc cũ, tức một số không âm. Câu lệnh ghi trực tiếp giá trị âm thì bị từ chối ngay:
+\begin{lstlisting}[basicstyle=\ttfamily\footnotesize, breaklines=true, frame=single]
+Msg 547, Level 16, State 1, Line 1
+The UPDATE statement conflicted with the CHECK constraint "CK_Demo_Product_stock". The conflict occurred in database "TxDemoDB", table "dbo.Demo_Product", column 'stock_qty'.
+The statement has been terminated.
+\end{lstlisting}
+\textcolor{red}{\textbf{[CHÈN ẢNH: lỗi 547 trên SSMS]}}
+
+\textbf{Kết luận.} \texttt{CHECK} là lớp bảo vệ cuối cùng cho bất biến ``tồn kho không âm'' mà SQL Server có sẵn và Neo4j không có; Neo4j phải dựa hoàn toàn vào logic ứng dụng và khóa. Tuy vậy \texttt{CHECK} không thay thế khóa hoặc mức cô lập.
+
+\paragraph{Kịch bản 6: Atomicity -- sự cố sau khi đã trừ kho}
+\label{par:tx-kb6}\mbox{}
+
+\textbf{Mục tiêu.} Kiểm chứng rằng khi có sự cố giữa ``trừ kho'' và ``tạo đơn'', kho được hoàn nguyên, không xảy ra \texttt{LEAKED\_STOCK}.
+
+\textbf{Cách thực hiện.} SQL Server: tham số \texttt{@fail\_after\_write = 1} ném lỗi \texttt{50099} sau câu \texttt{UPDATE} và trước câu \texttt{INSERT} đơn; với \texttt{XACT\_ABORT ON} cả giao dịch bị rollback. Neo4j: runner ném lỗi giả lập sau khi trừ kho, giao dịch unmanaged bị rollback. Runner: \texttt{--fail-every 4} (người mua thứ 4, 8, 12\ldots{} gặp sự cố).
+
+\begin{lstlisting}[basicstyle=\ttfamily\small, breaklines=true, frame=single]
+-- Doi chung KHONG giao dich (moi cau tu commit) - SQL Server:
+UPDATE dbo.Demo_Product SET stock_qty = stock_qty - 1 WHERE product_id = 1;
+THROW 50099, 'crash', 1; -- su co truoc khi INSERT don
+-- demo_Verify => final_stock = 4, orders = 0 => LEAKED_STOCK
+
+// Neo4j (auto-commit): MATCH (p:Product {id:1}) SET p.stock = p.stock - 1; => LEAKED_STOCK
+\end{lstlisting}
+
+\textbf{Trạng thái số liệu:} Đã đo (\texttt{--fail-every 4}, 50 người mua, tồn kho 5, \texttt{--think 0}, \texttt{--retry 20}, lặp 10 lần; giá trị là trung bình mỗi lần chạy).
+
+\begin{table}[htbp]
+\centering
+\caption{Kết quả đo Kịch bản 6 (sự cố giả lập sau khi trừ kho, \texttt{--fail-every 4})}
+\label{tab:tx-kb6}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{l l c c c X}
+\toprule
+\textbf{DBMS} & \textbf{Chế độ} & \textbf{TB \texttt{failed}} & \textbf{TB \texttt{orders}} & \textbf{TB \texttt{finalStock}} & \textbf{Verdict (10/10 lần)} \\
+\midrule
+MSSQL & \texttt{ATOMIC} & 1,2 & 5 & 0 & \texttt{CONSISTENT} \\
+MSSQL & \texttt{UPDLOCK} & 1,1 & 5 & 0 & \texttt{CONSISTENT} \\
+MSSQL & \texttt{REPEATABLE} & 1,4 & 5 & 0 & \texttt{CONSISTENT} \\
+MSSQL & \texttt{SNAPSHOT} & 1,6 & 5 & 0 & \texttt{CONSISTENT} \\
+Neo4j & \texttt{LOCK\_FIRST} & 1,1 & 5 & 0 & \texttt{CONSISTENT} \\
+\midrule
+MSSQL & \texttt{NAIVE} & 12 & 38 & 2,6 & \texttt{LOST\_UPDATE} \\
+Neo4j & \texttt{NAIVE} & 12 & 38 & 4 & \texttt{LOST\_UPDATE} \\
+Neo4j & \texttt{SINGLE\_STMT} & 1,4 & 8,6 & $-3{,}6$ & \texttt{NEGATIVE\_STOCK} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Cách đọc bảng: ở năm chế độ phía trên (vốn đúng khi không có sự cố), có trung bình 1,1--1,6 giao dịch gặp sự cố \emph{sau khi đã trừ kho}. Dù vậy, kết quả cuối vẫn đúng 5 đơn, tồn kho 0, \texttt{CONSISTENT} trong cả 10/10 lần chạy. Nếu phần trừ kho của các giao dịch lỗi không được hoàn tác, tồn kho sẽ cạn trước khi đủ 5 đơn và verdict phải là \texttt{LEAKED\_STOCK}. Ở các chế độ còn lại, lỗi cô lập vốn có (\texttt{LOST\_UPDATE}, \texttt{NEGATIVE\_STOCK}) chiếm ưu thế trong bất biến nên không dùng được để đánh giá Atomicity. Với \texttt{NAIVE}, đúng 12 người mua (thứ 4, 8, \ldots, 48) gặp sự cố, vì không ai bị từ chối do hết hàng trước bước trừ kho. Log gốc: \texttt{results/03\_atomicity.txt} [11]. \textcolor{red}{\textbf{[CHÈN ẢNH: trường hợp đối chứng autocommit (\texttt{LEAKED\_STOCK}) và trường hợp có giao dịch (kho được hoàn nguyên) trên SSMS và \texttt{cypher-shell}]}}
+
+\textbf{Phân tích.} Cả hai DBMS đều bảo đảm Atomicity khi giao dịch tường minh bị hủy giữa chừng. Cách làm khác nhau: SQL Server đã sửa trang trong Buffer Pool nên rollback phải hoàn tác bằng nhật ký (Mục~\ref{subsubsec:tx-mssql}); Neo4j chỉ bỏ trạng thái đang giữ trong bộ nhớ (Mục~\ref{subsubsec:tx-neo4j}). Nhóm chưa đo chi phí rollback nên không kết luận về chênh lệch tốc độ. Trường hợp đối chứng (mỗi câu tự commit) cho thấy nếu không gói trong giao dịch thì cả hai đều để lọt tồn kho.
+
+\textbf{Kết luận.} Atomicity là điểm hai DBMS tương đương về hành vi quan sát được, miễn là nghiệp vụ được đặt trong một giao dịch tường minh.
+
+\paragraph{Tổng hợp kết quả đo và độ tin cậy}
+\label{par:tx-summary}\mbox{}
+
+\begin{table}[htbp]
+\centering
+\caption{Tổng hợp kết quả đo (50 người mua, tồn kho 5, think 0, retry 20, lặp 10)}
+\label{tab:tx-summary}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{l l c c c c X}
+\toprule
+\textbf{DBMS} & \textbf{Chế độ} & \textbf{Lần bất thường} & \textbf{TB đơn OK} & \textbf{TB oversold} & \textbf{TB ms} & \textbf{Verdict} \\
+\midrule
+MSSQL & \texttt{NAIVE} & 10/10 & 50 & 45 & 333 & \texttt{LOST\_UPDATE} \\
+MSSQL & \texttt{ATOMIC} & 0/10 & 5 & 0 & 180 & \texttt{CONSISTENT} \\
+MSSQL & \texttt{UPDLOCK} & 0/10 & 5 & 0 & 104 & \texttt{CONSISTENT} \\
+MSSQL & \texttt{REPEATABLE} & 0/10 & 5 & 0 & 2025 & \texttt{CONSISTENT} (TB 98,4 deadlock, phải thử lại) \\
+MSSQL & \texttt{SNAPSHOT} & 0/10 & 5 & 0 & 193 & \texttt{CONSISTENT} (TB 53,2 update conflict, phải thử lại) \\
+Neo4j & \texttt{NAIVE} & 10/10 & 50 & 45 & 812 & \texttt{LOST\_UPDATE} \\
+Neo4j & \texttt{SINGLE\_STMT} & 10/10 & 8,3 & 3,3 & 4261 & \texttt{NEGATIVE\_STOCK} (TB 339,6 deadlock) \\
+Neo4j & \texttt{LOCK\_FIRST} & 0/10 & 5 & 0 & 557 & \texttt{CONSISTENT} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Những điều kết quả cho phép khẳng định:} (1) mẫu đọc--tính--ghi gây \texttt{LOST\_UPDATE} trên cả hai DBMS; (2) khóa trước khi đọc (\texttt{UPDLOCK}, \texttt{LOCK\_FIRST}) và câu \texttt{UPDATE \ldots{} WHERE} của SQL Server đều đạt \texttt{CONSISTENT}; (3) câu Cypher có điều kiện cho \texttt{NEGATIVE\_STOCK}, khác với SQL Server; (4) trên SQL Server, \texttt{REPEATABLE READ} và \texttt{SNAPSHOT} giữ đúng nhưng phải thử lại.
+
+\textbf{Những hạn chế cần nêu rõ:}
+\begin{itemize}
+    \item \textbf{Phạm vi:} một sản phẩm, một máy chủ, mô hình rút gọn; đây là minh họa cơ chế, không phải benchmark hiệu năng. Thời gian chỉ so sánh trong cùng một DBMS (Mục~\ref{par:tx-env}).
+    \item \textbf{Tài nguyên:} hai container không bị giới hạn CPU/RAM nên có thể tranh nhau tài nguyên máy chủ; số đo thay đổi theo máy.
+    \item \textbf{Phiên bản:} demo chạy Neo4j 5.26 Community nhưng tài liệu tham chiếu là bản ``current''; hành vi khóa có thể khác giữa các phiên bản.
+    \item \textbf{Tính tất định:} race condition không tất định; 10 lần lặp cho thấy xu hướng, không phải xác suất chính xác.
+    \item \textbf{Nút Product của Neo4j có thể trở thành nút ``dày'' (đã kiểm tra, không ảnh hưởng):} theo tài liệu, nút có khoảng 50 quan hệ trở lên được coi là dày và dùng loại khóa khác khi tạo quan hệ [6]. Ở phiên bản đầu, \texttt{NAIVE} tạo tới 50 đơn gắn vào \texttt{Product} và bước đặt lại dùng \texttt{MERGE}, nên nút có thể mang trạng thái ``dày'' sang các chế độ sau. Nhóm đã xử lý theo hai cách. (a) Đo trực tiếp trên cùng một tải: nút mới tạo cho 49/60 deadlock với \texttt{SINGLE\_STMT}, nút đã làm ``dày'' trước (tạo rồi xóa 60 quan hệ) cho 50/60; \texttt{LOCK\_FIRST} cho 0/60 ở cả hai. Kết quả gần như trùng nhau, nên hiệu ứng nút dày không giải thích được deadlock. (b) Sửa bước đặt lại thành xóa hẳn rồi tạo mới nút (\texttt{DETACH DELETE} + \texttt{CREATE}) và đo lại toàn bộ; verdict của mọi chế độ không đổi so với lần đo đầu.
+    \item \textbf{Độ khớp phiên bản mã nguồn:} toàn bộ số liệu trong các Bảng~\ref{tab:tx-kb1}--\ref{tab:tx-kb6} và Bảng~\ref{tab:tx-summary} được đo lại ngày 26/11/2026 bằng đúng phiên bản mã nguồn nộp kèm; log gốc nằm trong \texttt{results/} [11]. So với lần đo ngày 23/11/2026 (phiên bản trước khi sửa bước đặt lại), verdict và số lần bất thường của mọi chế độ không đổi; các giá trị trung bình chỉ lệch nhẹ (ví dụ \texttt{SINGLE\_STMT}: 8,5 $\rightarrow$ 8,3 đơn OK, 3,5 $\rightarrow$ 3,3 oversold), phù hợp với tính không tất định của race condition.
+\end{itemize}
+
+% ----------------------------------------------------------------------------
+\subsubsection{Đánh giá tổng hợp và kết luận}
+\label{subsubsec:tx-conclusion}
+
+\begin{table}[htbp]
+\centering
+\caption{So sánh theo tiêu chí liên quan đến nghiệp vụ}
+\label{tab:tx-comparison}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{>{\bfseries}l X X l}
+\toprule
+Tiêu chí & \textbf{SQL Server} & \textbf{Neo4j} & \textbf{Cơ sở} \\
+\midrule
+Atomicity khi lỗi giữa giao dịch & Rollback đúng & Rollback đúng & KB~6 \\
+Chống Lost Update ``theo mặc định'' & Không (Read Committed) & Không (Read Committed) & KB~1 \\
+Chống Lost Update bằng khóa tường minh & \texttt{UPDLOCK}, hoặc \texttt{UPDATE \ldots{} WHERE} & \texttt{SET p.\_lock = true} trước khi đọc & KB~2, 3 \\
+Kiểm tra ``còn hàng'' trong một câu lệnh & An toàn (\texttt{ATOMIC}) & Không an toàn (\texttt{NEGATIVE\_STOCK}) & KB~3 \\
+Lựa chọn chiến lược cô lập & Nhiều mức: khóa hoặc đa phiên bản & Chỉ Read Committed (+ khóa tường minh) & KB~4; Mục~\ref{subsubsec:tx-neo4j} \\
+Ràng buộc miền giá trị ($\text{stock} \ge 0$) & Có (\texttt{CHECK}) & Không có & KB~5 \\
+Phát hiện deadlock & Có, lỗi \texttt{1205} & Có, \texttt{DeadlockDetected} (lỗi tạm thời) & Mục~\ref{subsubsec:tx-mssql}--\ref{subsubsec:tx-neo4j} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Tổng kết.} SQL Server và Neo4j đều tuân thủ ACID và đều dùng nhật ký ghi trước kết hợp checkpoint để phục hồi. Về kiến trúc, SQL Server cập nhật tại chỗ trong Buffer Pool (Steal/No-Force) với nhật ký Undo/Redo và phục hồi ARIES; Neo4j giữ thay đổi chưa commit trong bộ nhớ (No-Steal) và phục hồi bằng phát lại nhật ký. Về cô lập, SQL Server có nhiều mức và gợi ý khóa khai báo sẵn, còn Neo4j chỉ có Read Committed cộng khóa ghi, đồng thời giao cho lập trình viên trách nhiệm khóa tường minh khi cần.
+
+\textbf{Đánh giá theo nghiệp vụ sàn thương mại điện tử.} Lõi giao dịch của hệ thống (đặt hàng và áp voucher, hủy đơn hoàn kho, điều chỉnh tồn kho) là các giao dịch ngắn, ghi nhiều, trên dữ liệu có cấu trúc cố định và có ràng buộc toàn vẹn, trong đó tồn kho là hàng nóng. Thực nghiệm cho thấy: cả hai DBMS đều bảo đảm Atomicity và đều bị Lost Update nếu viết theo mẫu đọc--tính--ghi; SQL Server chống được overselling bằng một câu \texttt{UPDATE \ldots{} WHERE} hoặc \texttt{UPDLOCK}, đồng thời có \texttt{CHECK} làm lớp bảo vệ cuối; Neo4j chỉ an toàn khi lập trình viên chủ động khóa ghi trước khi đọc, và một câu Cypher có điều kiện -- dạng tưởng như tương đương -- vẫn để lọt tồn kho âm khi tải cao có thử lại. Nói cách khác, trên Neo4j trách nhiệm bảo đảm cô lập chuyển từ DBMS sang mã ứng dụng, làm tăng rủi ro lỗi nghiệp vụ.
+
+\textbf{Khuyến nghị.} Với lõi giao dịch của sàn, nhóm lựa chọn SQL Server: cô lập được khai báo ở mức DBMS, ràng buộc toàn vẹn được thực thi tự động, và đây cũng là hệ mà ứng dụng đang chạy. Neo4j phù hợp hơn cho các thành phần thiên về quan hệ như gợi ý sản phẩm theo hành vi mua chung hoặc phát hiện mạng lưới gian lận; các thành phần này có thể chạy song song với CSDL giao dịch thay vì thay thế nó. Khi dùng Neo4j cho bất kỳ nghiệp vụ nào ghi vào cùng một nút từ nhiều giao dịch, cần áp dụng mẫu khóa tường minh và có kiểm thử đồng thời như bộ demo này.
+
+\textbf{Giới hạn của kết luận.} Kết luận dựa trên một nghiệp vụ (trừ tồn kho) trên một máy chủ, với bộ dữ liệu rút gọn và các hạn chế đã nêu ở Mục~\ref{par:tx-summary}. Các khía cạnh khác của giao dịch như phục hồi sự cố, giao dịch lô lớn, giao dịch phân tán và cụm chưa được kiểm chứng bằng thực nghiệm trong phạm vi này.
+
+% ----------------------------------------------------------------------------
+\subsubsection*{Tài liệu tham khảo của mục Transactions \& Concurrency Control}
+
+\begin{enumerate}[label={[\arabic*]}, leftmargin=*, itemsep=2pt]
+    \item Elmasri, R., Navathe, S. B. \textit{Fundamentals of Database Systems} -- chương Introduction to Transaction Processing Concepts and Theory; slide bài giảng môn DBMS (Semester 261).
+    \item Microsoft Learn. \textit{Transaction Locking and Row Versioning Guide}. \url{https://learn.microsoft.com/en-us/sql/relational-databases/sql-server-transaction-locking-and-row-versioning-guide?view=sql-server-ver17}
+    \item Microsoft Learn. \textit{SQL Server Transaction Log Architecture and Management Guide}. \url{https://learn.microsoft.com/en-us/sql/relational-databases/sql-server-transaction-log-architecture-and-management-guide?view=sql-server-ver17}
+    \item Microsoft Learn. \textit{Accelerated Database Recovery}. \url{https://learn.microsoft.com/en-us/sql/relational-databases/accelerated-database-recovery-concepts?view=sql-server-ver17}
+    \item Neo4j Operations Manual. \textit{Database transactions}. \url{https://neo4j.com/docs/operations-manual/current/database-internals/transaction-management/}
+    \item Neo4j Operations Manual. \textit{Concurrent data access (locks and deadlocks)}. \url{https://neo4j.com/docs/operations-manual/current/database-internals/locks-deadlocks/}
+    \item Neo4j Operations Manual. \textit{Checkpointing and log pruning}. \url{https://neo4j.com/docs/operations-manual/current/database-internals/checkpointing/}
+    \item Microsoft Learn. \textit{SET TRANSACTION ISOLATION LEVEL (Transact-SQL)}. \url{https://learn.microsoft.com/en-us/sql/t-sql/statements/set-transaction-isolation-level-transact-sql}
+    \item Microsoft. \textit{Row Versioning-based Isolation Level Example (ví dụ lỗi 3960)}. \url{https://technet.microsoft.com/en-us/library/ms191190.aspx}
+    \item Neo4j Operations Manual. \textit{Transaction logging}. \url{https://neo4j.com/docs/operations-manual/current/database-internals/transaction-logs/}
+    \item Nhóm thực hiện. \textit{Bộ mã nguồn demo Flash Sale}: \texttt{docker-compose.yml}, \texttt{mssql\_flashsale\_demo.sql}, \texttt{neo4j\_flashsale\_demo.cypher}, \texttt{run\_flashsale.mjs}, \texttt{setup\_mssql.mjs}, \texttt{README.md}; log kết quả đo gốc trong thư mục \texttt{results/}.
+\end{enumerate}
+
+\end{document}

@@ -1,0 +1,26 @@
+{
+  "name": "txdemo-flashsale",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Demo Transaction/Isolation: Flash Sale (MSSQL vs Neo4j)",
+  "scripts": {
+    "db:up": "docker compose up -d",
+    "db:up:all": "docker compose --profile mssql up -d",
+    "db:down": "docker compose --profile mssql down",
+    "db:ps": "docker compose --profile mssql ps",
+    "setup:mssql": "node setup_mssql.mjs",
+    "demo": "node run_flashsale.mjs",
+    "demo:mssql": "node run_flashsale.mjs --db mssql",
+    "demo:neo4j": "node run_flashsale.mjs --db neo4j",
+    "demo:report": "node run_flashsale.mjs --db both --repeat 5",
+    "demo:report:retry": "node run_flashsale.mjs --db both --repeat 10 --think 0 --buyers 50 --retry 20",
+    "demo:atomicity": "node run_flashsale.mjs --db both --fail-every 4",
+    "neo4j:shell": "docker exec -it txdemo_neo4j cypher-shell -u neo4j -p password123"
+  },
+  "dependencies": {
+    "mssql": "^11.0.0",
+    "neo4j-driver": "^5.28.0"
+  },
+  "engines": { "node": ">=18" }
+}

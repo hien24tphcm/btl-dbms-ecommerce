@@ -1,0 +1,33 @@
+Cấu hình: {"db":"mssql","mode":"NAIVE","buyers":50,"stock":5,"think":0,"qty":1,"retry":20,"repeat":10,"failEvery":0,"check":true,"verbose":false}
+┌─────────┬─────────┬─────────┬────────┬───────┬────┬─────────┬──────────┬──────────┬────────┬──────────┬───────┬─────────┬──────────┬──────────┬────────┬────────────┬──────────┬───────────────┬─────┐
+│ (index) │ db      │ mode    │ buyers │ stock │ ok │ soldOut │ deadlock │ conflict │ failed │ checkErr │ other │ retries │ dlEvents │ cfEvents │ orders │ finalStock │ oversold │ verdict       │ ms  │
+├─────────┼─────────┼─────────┼────────┼───────┼────┼─────────┼──────────┼──────────┼────────┼──────────┼───────┼─────────┼──────────┼──────────┼────────┼────────────┼──────────┼───────────────┼─────┤
+│ 0       │ 'MSSQL' │ 'NAIVE' │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 2          │ 45       │ 'LOST_UPDATE' │ 459 │
+│ 1       │ 'MSSQL' │ 'NAIVE' │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 3          │ 45       │ 'LOST_UPDATE' │ 306 │
+│ 2       │ 'MSSQL' │ 'NAIVE' │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 3          │ 45       │ 'LOST_UPDATE' │ 268 │
+│ 3       │ 'MSSQL' │ 'NAIVE' │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 2          │ 45       │ 'LOST_UPDATE' │ 259 │
+│ 4       │ 'MSSQL' │ 'NAIVE' │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 2          │ 45       │ 'LOST_UPDATE' │ 292 │
+│ 5       │ 'MSSQL' │ 'NAIVE' │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 2          │ 45       │ 'LOST_UPDATE' │ 338 │
+│ 6       │ 'MSSQL' │ 'NAIVE' │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 3          │ 45       │ 'LOST_UPDATE' │ 256 │
+│ 7       │ 'MSSQL' │ 'NAIVE' │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 2          │ 45       │ 'LOST_UPDATE' │ 237 │
+│ 8       │ 'MSSQL' │ 'NAIVE' │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 3          │ 45       │ 'LOST_UPDATE' │ 234 │
+│ 9       │ 'MSSQL' │ 'NAIVE' │ 50     │ 5     │ 50 │ 0       │ 0        │ 0        │ 0      │ 0        │ 0     │ 0       │ 0        │ 0        │ 50     │ 3          │ 45       │ 'LOST_UPDATE' │ 236 │
+└─────────┴─────────┴─────────┴────────┴───────┴────┴─────────┴──────────┴──────────┴────────┴──────────┴───────┴─────────┴──────────┴──────────┴────────┴────────────┴──────────┴───────────────┴─────┘
+
+TỔNG HỢP theo chế độ (đưa vào báo cáo):
+┌─────────┬─────────┬─────────┬──────┬─────────────┬───────┬─────────────┬─────────────┬─────────────┬──────────────┬───────┬───────────────┐
+│ (index) │ db      │ mode    │ runs │ anomalyRuns │ avgOk │ avgOversold │ avgDeadlock │ avgConflict │ avgFinalFail │ avgMs │ verdicts      │
+├─────────┼─────────┼─────────┼──────┼─────────────┼───────┼─────────────┼─────────────┼─────────────┼──────────────┼───────┼───────────────┤
+│ 0       │ 'MSSQL' │ 'NAIVE' │ 10   │ 10          │ 50    │ 45          │ 0           │ 0           │ 0            │ 289   │ 'LOST_UPDATE' │
+└─────────┴─────────┴─────────┴──────┴─────────────┴───────┴─────────────┴─────────────┴─────────────┴──────────────┴───────┴───────────────┘
+Cách đọc kết quả:
+  ok        số đơn commit thành công            soldOut   bị từ chối vì hết hàng (50003)
+  deadlock  người mua thất bại cuối cùng vì deadlock (1205 / Neo4j) – sau khi hết lượt retry
+  conflict  như trên với snapshot update conflict (3960)
+  dlEvents / cfEvents  tổng số LẦN gặp deadlock / conflict, kể cả lần đã retry
+  (bảng TỔNG HỢP: avgDeadlock / avgConflict = TB dlEvents / cfEvents; avgFinalFail = TB deadlock + conflict)
+  failed    sự cố giả lập sau khi trừ kho (--fail-every) – phải được rollback
+  checkErr  bị CHECK (stock_qty >= 0) chặn (547) other     lỗi khác (xem log)
+  oversold  số đơn vị bán VƯỢT tồn kho ban đầu
+  verdict   CONSISTENT | LOST_UPDATE | NEGATIVE_STOCK | LEAKED_STOCK
+  ms        tổng thời gian cả đợt – chỉ so sánh giữa các chế độ TRONG CÙNG một DBMS

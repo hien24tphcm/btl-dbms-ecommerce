@@ -1,0 +1,57 @@
+# Môi trường demo Transaction / Concurrency: MSSQL 2022 vs Neo4j 5
+#
+#   docker compose up -d                    # chỉ Neo4j (dùng MSSQL có sẵn, vd container ecommerce_mssql)
+#   docker compose --profile mssql up -d    # Neo4j + MSSQL riêng cho demo
+#   docker compose down                     # dừng (giữ dữ liệu)   |  down -v  => xoá luôn volume
+#
+# Cổng host có thể đổi qua biến môi trường nếu bị trùng:
+#   NEO4J_HTTP_PORT (7474)  NEO4J_BOLT_PORT (7687)  MSSQL_HOST_PORT (1433)
+
+name: txdemo
+
+services:
+  neo4j:
+    image: neo4j:5.26-community          # bản LTS của Neo4j 5
+    container_name: txdemo_neo4j
+    ports:
+      - "${NEO4J_HTTP_PORT:-7474}:7474"  # Neo4j Browser: http://localhost:7474
+      - "${NEO4J_BOLT_PORT:-7687}:7687"  # Bolt (driver / cypher-shell)
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-password123}   # Neo4j 5 yêu cầu mật khẩu >= 8 ký tự
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 1g
+      NEO4J_server_memory_pagecache_size: 256m
+      # Thời gian chờ khoá mặc định là vô hạn (giống MSSQL LOCK_TIMEOUT -1) – giữ nguyên để so sánh công bằng
+    volumes:
+      - neo4j_data:/data
+      - ./:/demo:ro                      # để chạy: cypher-shell -f /demo/neo4j_flashsale_demo.cypher
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p \"$${NEO4J_AUTH#neo4j/}\" 'RETURN 1' || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
+
+  mssql:
+    profiles: ["mssql"]
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: txdemo_mssql
+    ports:
+      - "${MSSQL_HOST_PORT:-1433}:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_PASSWORD:-Password_123#}
+    volumes:
+      - mssql_data:/var/opt/mssql
+      - ./:/demo:ro
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -Q 'SELECT 1' -b -o /dev/null || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
+
+volumes:
+  neo4j_data:
+  mssql_data:

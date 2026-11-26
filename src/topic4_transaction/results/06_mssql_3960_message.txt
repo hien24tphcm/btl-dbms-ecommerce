@@ -1,0 +1,21 @@
+Cấu hình: {"db":"mssql","mode":"SNAPSHOT","buyers":50,"stock":5,"think":0,"qty":1,"retry":0,"repeat":1,"failEvery":0,"check":false,"verbose":true}
+
+[mssql/SNAPSHOT] thông điệp lỗi đầu tiên:
+Msg 3960: Snapshot isolation transaction aborted due to update conflict. You cannot use snapshot isolation to access table 'dbo.Demo_Product' directly or indirectly in database 'TxDemoDB' to update, delete, or insert the row that has been modified or deleted by another transaction. Retry the transaction or change the isolation level for the update/delete statement.
+
+┌─────────┬─────────┬────────────┬────────┬───────┬────┬─────────┬──────────┬──────────┬────────┬──────────┬───────┬─────────┬──────────┬──────────┬────────┬────────────┬──────────┬──────────────┬─────┐
+│ (index) │ db      │ mode       │ buyers │ stock │ ok │ soldOut │ deadlock │ conflict │ failed │ checkErr │ other │ retries │ dlEvents │ cfEvents │ orders │ finalStock │ oversold │ verdict      │ ms  │
+├─────────┼─────────┼────────────┼────────┼───────┼────┼─────────┼──────────┼──────────┼────────┼──────────┼───────┼─────────┼──────────┼──────────┼────────┼────────────┼──────────┼──────────────┼─────┤
+│ 0       │ 'MSSQL' │ 'SNAPSHOT' │ 50     │ 5     │ 2  │ 0       │ 0        │ 48       │ 0      │ 0        │ 0     │ 0       │ 0        │ 48       │ 2      │ 3          │ 0        │ 'CONSISTENT' │ 155 │
+└─────────┴─────────┴────────────┴────────┴───────┴────┴─────────┴──────────┴──────────┴────────┴──────────┴───────┴─────────┴──────────┴──────────┴────────┴────────────┴──────────┴──────────────┴─────┘
+Cách đọc kết quả:
+  ok        số đơn commit thành công            soldOut   bị từ chối vì hết hàng (50003)
+  deadlock  người mua thất bại cuối cùng vì deadlock (1205 / Neo4j) – sau khi hết lượt retry
+  conflict  như trên với snapshot update conflict (3960)
+  dlEvents / cfEvents  tổng số LẦN gặp deadlock / conflict, kể cả lần đã retry
+  (bảng TỔNG HỢP: avgDeadlock / avgConflict = TB dlEvents / cfEvents; avgFinalFail = TB deadlock + conflict)
+  failed    sự cố giả lập sau khi trừ kho (--fail-every) – phải được rollback
+  checkErr  bị CHECK (stock_qty >= 0) chặn (547) other     lỗi khác (xem log)
+  oversold  số đơn vị bán VƯỢT tồn kho ban đầu
+  verdict   CONSISTENT | LOST_UPDATE | NEGATIVE_STOCK | LEAKED_STOCK
+  ms        tổng thời gian cả đợt – chỉ so sánh giữa các chế độ TRONG CÙNG một DBMS

@@ -1,0 +1,24 @@
+Cấu hình: {"db":"neo4j","mode":"SINGLE_STMT","buyers":50,"stock":5,"think":0,"qty":1,"retry":0,"repeat":1,"failEvery":0,"check":false,"verbose":true}
+
+[neo4j/SINGLE_STMT] thông điệp lỗi đầu tiên:
+Neo.TransientError.Transaction.DeadlockDetected
+ForsetiClient[transactionId=11118, clientId=997] can't acquire ExclusiveLock{owner=ForsetiClient[transactionId=11119, clientId=998]} on NODE(165) because holders of that lock are waiting for ForsetiClient[transactionId=11118, clientId=997].
+ Wait list:ExclusiveLock[
+Client[11119] waits for [ForsetiClient[transactionId=11118, clientId=997]]]
+
+┌─────────┬─────────┬───────────────┬────────┬───────┬────┬─────────┬──────────┬──────────┬────────┬──────────┬───────┬─────────┬──────────┬──────────┬────────┬────────────┬──────────┬──────────────┬─────┐
+│ (index) │ db      │ mode          │ buyers │ stock │ ok │ soldOut │ deadlock │ conflict │ failed │ checkErr │ other │ retries │ dlEvents │ cfEvents │ orders │ finalStock │ oversold │ verdict      │ ms  │
+├─────────┼─────────┼───────────────┼────────┼───────┼────┼─────────┼──────────┼──────────┼────────┼──────────┼───────┼─────────┼──────────┼──────────┼────────┼────────────┼──────────┼──────────────┼─────┤
+│ 0       │ 'Neo4j' │ 'SINGLE_STMT' │ 50     │ 5     │ 4  │ 0       │ 46       │ 0        │ 0      │ 0        │ 0     │ 0       │ 46       │ 0        │ 4      │ 1          │ 0        │ 'CONSISTENT' │ 651 │
+└─────────┴─────────┴───────────────┴────────┴───────┴────┴─────────┴──────────┴──────────┴────────┴──────────┴───────┴─────────┴──────────┴──────────┴────────┴────────────┴──────────┴──────────────┴─────┘
+Cách đọc kết quả:
+  ok        số đơn commit thành công            soldOut   bị từ chối vì hết hàng (50003)
+  deadlock  người mua thất bại cuối cùng vì deadlock (1205 / Neo4j) – sau khi hết lượt retry
+  conflict  như trên với snapshot update conflict (3960)
+  dlEvents / cfEvents  tổng số LẦN gặp deadlock / conflict, kể cả lần đã retry
+  (bảng TỔNG HỢP: avgDeadlock / avgConflict = TB dlEvents / cfEvents; avgFinalFail = TB deadlock + conflict)
+  failed    sự cố giả lập sau khi trừ kho (--fail-every) – phải được rollback
+  checkErr  bị CHECK (stock_qty >= 0) chặn (547) other     lỗi khác (xem log)
+  oversold  số đơn vị bán VƯỢT tồn kho ban đầu
+  verdict   CONSISTENT | LOST_UPDATE | NEGATIVE_STOCK | LEAKED_STOCK
+  ms        tổng thời gian cả đợt – chỉ so sánh giữa các chế độ TRONG CÙNG một DBMS
