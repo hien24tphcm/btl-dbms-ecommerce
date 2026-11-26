@@ -1,0 +1,7 @@
+﻿experiment,method,result,plan_status,plan_description
+Range,Scan,300,OK,ProduceResults@neo4j [Rows=1] [DB Hits=0] |   EagerAggregation@neo4j [Rows=1] [DB Hits=0] |     Filter@neo4j [Rows=300] [DB Hits=100000] |       NodeByLabelScan@neo4j [Rows=100000] [DB Hits=100001]
+Range,Index,300,OK,ProduceResults@neo4j [Rows=1] [DB Hits=0] |   EagerAggregation@neo4j [Rows=1] [DB Hits=0] |     NodeIndexSeekByRange@neo4j [Rows=300] [DB Hits=301]
+Composite,Scan,400,OK,ProduceResults@neo4j [Rows=1] [DB Hits=0] |   EagerAggregation@neo4j [Rows=1] [DB Hits=0] |     Filter@neo4j [Rows=400] [DB Hits=108100] |       NodeByLabelScan@neo4j [Rows=100000] [DB Hits=100001]
+Composite,Index,400,OK,ProduceResults@neo4j [Rows=1] [DB Hits=0] |   EagerAggregation@neo4j [Rows=1] [DB Hits=0] |     NodeIndexSeek@neo4j [Rows=400] [DB Hits=401]
+Text,Scan,11,OK,ProduceResults@neo4j [Rows=1] [DB Hits=0] |   EagerAggregation@neo4j [Rows=1] [DB Hits=0] |     Filter@neo4j [Rows=11] [DB Hits=100000] |       NodeByLabelScan@neo4j [Rows=100000] [DB Hits=100001]
+Text,Index,11,OK,ProduceResults@neo4j [Rows=1] [DB Hits=0] |   EagerAggregation@neo4j [Rows=1] [DB Hits=0] |     NodeIndexContainsScan@neo4j [Rows=11] [DB Hits=12]

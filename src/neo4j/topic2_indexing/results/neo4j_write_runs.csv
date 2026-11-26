@@ -1,0 +1,15 @@
+﻿trial,mode,inserted,client_wall_ms
+1,no_index,5000,100.1963
+1,with_index,5000,160.0699
+2,with_index,5000,147.2665
+2,no_index,5000,75.1682
+3,no_index,5000,78.2328
+3,with_index,5000,198.681
+4,with_index,5000,119.842
+4,no_index,5000,47.752
+5,no_index,5000,43.3895
+5,with_index,5000,92.8139
+6,with_index,5000,118.1654
+6,no_index,5000,44.496
+7,no_index,5000,55.7479
+7,with_index,5000,121.624

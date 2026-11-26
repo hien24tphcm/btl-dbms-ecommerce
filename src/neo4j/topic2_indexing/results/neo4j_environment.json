@@ -1,0 +1,27 @@
+{
+  "time_utc": "2026-11-23T07:17:58.850761+00:00",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.13.0",
+  "uri": "bolt://localhost:7687",
+  "database": "neo4j",
+  "neo4j_components": [
+    {
+      "name": "Neo4j Kernel",
+      "versions": [
+        "2026.10.1"
+      ]
+    },
+    {
+      "name": "Cypher",
+      "versions": [
+        "5",
+        "25"
+      ]
+    }
+  ],
+  "method": "USING SCAN vs USING RANGE/TEXT INDEX; both indexes already exist",
+  "warmups": 3,
+  "rounds": 10,
+  "measurement": "client wall ms incl. Bolt/driver/transaction; no PROFILE instrumentation",
+  "matching_sql_file": "sql_reference/01_mssql_create_100k.sql"
+}

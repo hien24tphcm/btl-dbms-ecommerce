@@ -1,0 +1,5 @@
+case,result_count,scan_median_ms,index_median_ms,scan_logical_reads,index_logical_reads,scan_operator,index_operator,measurement_scope,notes
+Range,300,,,,,,,,
+Composite,400,,,,,,,,
+TextSubstring,11,,,,,,,,
+Write_5000,,,,,,,,,
