@@ -1,0 +1,4 @@
+﻿thí_nghiệm,baseline_db_hits,indexed_db_hits,kết_quả,baseline_operator,indexed_operator
+Range,200001,301,300,NodeByLabelScan + Filter,NodeIndexSeekByRange
+Composite,208101,401,400,NodeByLabelScan + Filter,NodeIndexSeek
+Text,200001,12,11,NodeByLabelScan + Filter,NodeIndexContainsScan

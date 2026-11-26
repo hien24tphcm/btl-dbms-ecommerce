@@ -1,0 +1,37 @@
+[
+  {
+    "seller_id": 1,
+    "user_id": 2,
+    "shop_name": "TechZone Store",
+    "rating": 4.85,
+    "is_approved": true
+  },
+  {
+    "seller_id": 2,
+    "user_id": 3,
+    "shop_name": "FashionHub Official",
+    "rating": 4.7,
+    "is_approved": true
+  },
+  {
+    "seller_id": 3,
+    "user_id": 4,
+    "shop_name": "Knowledge Bookstore",
+    "rating": 4.9,
+    "is_approved": true
+  },
+  {
+    "seller_id": 4,
+    "user_id": 5,
+    "shop_name": "Modern Home Appliances",
+    "rating": 4.65,
+    "is_approved": true
+  },
+  {
+    "seller_id": 5,
+    "user_id": 6,
+    "shop_name": "ProSports Athletics",
+    "rating": 4.8,
+    "is_approved": true
+  }
+]

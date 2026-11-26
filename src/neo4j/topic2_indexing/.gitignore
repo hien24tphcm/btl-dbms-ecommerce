@@ -1,0 +1,16 @@
+# No passwords, local runtime artefacts, Python cache
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.vscode/settings.json
+*.log
+*.tmp
+# Do not ignore results/*.csv: they are deliberate, reviewed experiment evidence.
+
+# Database archives are transferred in private handoff ZIPs, not Git.
+*.dump

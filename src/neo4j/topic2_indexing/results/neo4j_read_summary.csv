@@ -1,0 +1,4 @@
+﻿experiment,result_count,median_scan_ms,median_index_ms,scan_div_index_speedup
+Range,300,40.8664,3.6634,11.1552
+Composite,400,53.433,3.9587,13.4978
+TextSubstring,11,61.087,8.3001,7.3598

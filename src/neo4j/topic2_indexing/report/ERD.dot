@@ -1,0 +1,27 @@
+digraph ERD {
+graph [rankdir=TB, bgcolor="white", pad=0.25, nodesep=0.35, ranksep=0.8, label="ECommerceDB – 9 bảng SQL Server (PK / FK)", labelloc=t, fontsize=22, fontname="DejaVu Sans"];
+node [shape=record, fontname="DejaVu Sans", fontsize=12, style=filled, fillcolor="#f2f5fa", color="#506780"];
+edge [fontname="DejaVu Sans", fontsize=10, color="#526579", arrowsize=0.6];
+Users [label="{Users|PK user_id\lusername\lemail\lpassword_hash\lfull_name\l}"];
+Sellers [label="{Sellers|PK seller_id\lFK user_id\lshop_name\lstore_description\lrating\lis_approved\l}"];
+Categories [label="{Categories|PK category_id\lFK parent_id\lcategory_name\ldescription\lcreated_at\l}"];
+Products [label="{Products|PK product_id\lFK seller_id\lFK category_id\lname\ldescription\lprice\lstock_quantity\l}"];
+Cart_Items [label="{Cart_Items|PK cart_item_id\lFK user_id\lFK product_id\lquantity\ladded_at\l}"];
+Orders [label="{Orders|PK order_id\lFK buyer_id\lFK seller_id\ltotal_amount\ldiscount_amount\lfinal_amount\lorder_status\l}"];
+Order_Details [label="{Order_Details|PK order_detail_id\lFK order_id\lFK product_id\lquantity\lunit_price\lsubtotal\l}"];
+Vouchers [label="{Vouchers|PK voucher_code\ldiscount_percent\lmin_order_value\lmax_discount\lvalid_from\l}"];
+Reviews [label="{Reviews|PK review_id\lFK order_detail_id\lFK user_id\lFK product_id\lrating\lcomment\lcreated_at\l}"];
+Users -> Sellers [label="user_id", taillabel="1", headlabel="0..1", dir=none];
+Categories -> Categories [label="parent_id", taillabel="0..1", headlabel="0..N", dir=none];
+Sellers -> Products [label="seller_id", taillabel="1", headlabel="0..N", dir=none];
+Categories -> Products [label="category_id", taillabel="1", headlabel="0..N", dir=none];
+Users -> Cart_Items [label="user_id", taillabel="1", headlabel="0..N", dir=none];
+Products -> Cart_Items [label="product_id", taillabel="1", headlabel="0..N", dir=none];
+Users -> Orders [label="buyer_id", taillabel="1", headlabel="0..N", dir=none];
+Sellers -> Orders [label="seller_id", taillabel="1", headlabel="0..N", dir=none];
+Orders -> Order_Details [label="order_id", taillabel="1", headlabel="0..N", dir=none];
+Products -> Order_Details [label="product_id", taillabel="1", headlabel="0..N", dir=none];
+Order_Details -> Reviews [label="order_detail_id", taillabel="0..1", headlabel="0..N", dir=none];
+Users -> Reviews [label="user_id", taillabel="1", headlabel="0..N", dir=none];
+Products -> Reviews [label="product_id", taillabel="1", headlabel="0..N", dir=none];
+}
