@@ -1,0 +1,9 @@
+bucket,n1_delta_bytes,n1_delta_mb,n2_delta_bytes,n2_delta_mb
+nodestore,892928,0.8516,909312,0.8672
+relationshipstore,1703936,1.625,10584064,10.0938
+relationshipgroupstore,0,0.0,8192,0.0078
+propertystore_fixed,11124736,10.6094,7405568,7.0625
+propertystore_strings,1277952,1.2188,0,0.0
+schema_indexes,4866048,4.6406,5267456,5.0234
+metadata_counts,0,0.0,0,0.0
+TOTAL,19865600,18.9453,24174592,23.0547

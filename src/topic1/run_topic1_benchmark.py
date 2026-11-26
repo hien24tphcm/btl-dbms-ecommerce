@@ -86,6 +86,15 @@ def parse_pipe_tables(output: str) -> List[List[Dict[str, str]]]:
                         or cur.startswith("SQL Server ")
                     ):
                         break
+                    if i + 1 < len(lines):
+                        cur_cols = cur.split("|")
+                        next_parts = [p.strip() for p in lines[i + 1].strip().split("|")]
+                        if (
+                            len(next_parts) == len(cur_cols)
+                            and next_parts
+                            and all(p and set(p) == {"-"} for p in next_parts)
+                        ):
+                            break
                     if "|" not in cur and len(headers) > 1:
                         break
                     vals = [v.strip() for v in lines[i].split("|")]
@@ -323,7 +332,7 @@ def run_mssql_pipeline(mssql: MssqlRunner) -> Dict[str, Any]:
 
     print("[MSSQL] 2/5 Generating 10,000 products x 5 variants = 50,000 variants (02_generate_data.sql)...")
     t0 = time.perf_counter()
-    gen_out = mssql.run_file(MSSQL_DIR / "02_generate_data.sql", timeout=300)
+    gen_out = mssql.run_file(MSSQL_DIR / "02_generate_data.sql", timeout=900)
     gen_elapsed_s = time.perf_counter() - t0
     gen_tables = parse_pipe_tables(gen_out)
     print(f"        Data generated in {gen_elapsed_s:.2f}s -> {gen_tables[-1][0] if gen_tables else ''}")
@@ -826,6 +835,12 @@ def main() -> int:
             f"{r['model_key']:<22} {r['dbms']:<21} {r['total_mb']:>9.4f} {r['bytes_per_variant']:>8.1f} "
             f"{r['evolution_ms']:>9.2f} {r['query_d_ms']:>9.2f} {r['query_d_matches']:>8d}"
         )
+    print("\nQuery (a) Insert & Query (c) Update Measurements:")
+    for br in mssql_res["bench"]:
+        if br["phase"] in ("query_a", "query_c"):
+            print(f"  [MSSQL] {br['phase']} | {br['model_key']:<18} | {br['metric_name']:<26} | {float(br['elapsed_ms']):>8.3f} ms | rows={br['row_cnt']} | {br['notes']}")
+    print(f"  [Neo4j] query_a | N1_Neo4j_Properties | insert_novel_attr          | {neo_res['qa_ms']:>8.3f} ms | rows=1 | CREATE novel property waterproof_ip")
+    print(f"  [Neo4j] query_c | N1_Neo4j_Properties | update_variant_attr        | {neo_res['qc_ms']:>8.3f} ms | rows=1 | Point SET price + color")
     print("\nArtifacts written:")
     print(f"  - {OUT_DIR / 'topic1_results.csv'}")
     print(f"  - {OUT_DIR / 'topic1_neo4j_stores.csv'}")

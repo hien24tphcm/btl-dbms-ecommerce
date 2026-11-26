@@ -72,11 +72,15 @@ OPTION (MAXDOP 1, MAX_GRANT_PERCENT = 20);
 -- 3. Populate all 6 SQL models in deterministic batches of 500 products (2,500 variants/batch)
 DECLARE @start_p INT = 1;
 DECLARE @end_p INT;
+DECLARE @start_v INT;
+DECLARE @end_v INT;
 
 WHILE @start_p <= @ProductCount
 BEGIN
     SET @end_p = @start_p + @BatchSize - 1;
     IF @end_p > @ProductCount SET @end_p = @ProductCount;
+    SET @start_v = (@start_p - 1) * @VariantsPerProduct + 1;
+    SET @end_v   = @end_p * @VariantsPerProduct;
 
     -- 3a. M3 (Sparse Wide Table)
     ;WITH V(v) AS (SELECT 0 UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4),
@@ -138,7 +142,7 @@ BEGIN
     -- 3b. Control WideNoSparse
     INSERT INTO dbo.T1_Variants_WideNoSparse
     SELECT * FROM dbo.T1_Variants_Sparse
-    WHERE product_id BETWEEN @start_p AND @end_p
+    WHERE variant_id BETWEEN @start_v AND @end_v
     OPTION (MAXDOP 1, MAX_GRANT_PERCENT = 20);
 
     -- 3c. M2a (NVARCHAR JSON)
@@ -153,21 +157,21 @@ BEGIN
             s.author_name, s.publisher, s.page_count, s.language, s.isbn_note
          FOR JSON PATH, WITHOUT_ARRAY_WRAPPER) AS attributes
     FROM dbo.T1_Variants_Sparse s
-    WHERE s.product_id BETWEEN @start_p AND @end_p
+    WHERE s.variant_id BETWEEN @start_v AND @end_v
     OPTION (MAXDOP 1, MAX_GRANT_PERCENT = 20);
 
     -- 3d. M2b (Native SQL Server 2025 `json` type)
     INSERT INTO dbo.T1_Variants_JsonNative (variant_id, product_id, category_name, sku, price, stock_qty, attributes)
     SELECT variant_id, product_id, category_name, sku, price, stock_qty, CAST(attributes AS json)
     FROM dbo.T1_Variants_JsonText
-    WHERE product_id BETWEEN @start_p AND @end_p
+    WHERE variant_id BETWEEN @start_v AND @end_v
     OPTION (MAXDOP 1, MAX_GRANT_PERCENT = 20);
 
     -- 3e. M1 & M1_PageComp (EAV)
     INSERT INTO dbo.T1_Variants_EAV (variant_id, product_id, sku, price, stock_qty)
     SELECT variant_id, product_id, sku, price, stock_qty
     FROM dbo.T1_Variants_Sparse
-    WHERE product_id BETWEEN @start_p AND @end_p
+    WHERE variant_id BETWEEN @start_v AND @end_v
     OPTION (MAXDOP 1, MAX_GRANT_PERCENT = 20);
 
     INSERT INTO dbo.T1_Variant_Attr_Values (variant_id, attr_id, attr_value)
@@ -197,16 +201,15 @@ BEGIN
         (N'isbn_note',       s.isbn_note)
     ) AS x(attr_name, attr_value)
     JOIN dbo.T1_Attributes a ON a.attr_name = x.attr_name
-    WHERE s.product_id BETWEEN @start_p AND @end_p
+    WHERE s.variant_id BETWEEN @start_v AND @end_v
       AND x.attr_value IS NOT NULL
     OPTION (MAXDOP 1, LOOP JOIN, MAX_GRANT_PERCENT = 20);
 
     INSERT INTO dbo.T1_Variant_Attr_Values_PageComp (variant_id, attr_id, attr_value)
     SELECT v.variant_id, v.attr_id, v.attr_value
     FROM dbo.T1_Variant_Attr_Values v
-    JOIN dbo.T1_Variants_EAV ev ON ev.variant_id = v.variant_id
-    WHERE ev.product_id BETWEEN @start_p AND @end_p
-    OPTION (MAXDOP 1, LOOP JOIN, MAX_GRANT_PERCENT = 20);
+    WHERE v.variant_id BETWEEN @start_v AND @end_v
+    OPTION (MAXDOP 1, MAX_GRANT_PERCENT = 20);
 
     SET @start_p = @end_p + 1;
 END

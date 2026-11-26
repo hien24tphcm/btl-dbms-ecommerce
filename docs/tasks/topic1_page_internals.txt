@@ -1,0 +1,3337 @@
+Changed database context to 'ECommerceDB'.
+=== 1. SCHEMA-ON-WRITE DEMO (CK_Products_price rejects negative price) ===
+error_number|severity|error_message
+------------|--------|-------------
+547|16|The INSERT statement conflicted with the CHECK constraint "CK_Products_price". The conflict occurred in database "ECommerceDB", table "dbo.Products", column 'price'.
+=== 2. ECOMMERCEDB 9 TABLES ALLOCATION UNITS & 8KB PAGES ===
+table_name|row_count|total_pages_8kb|used_pages_8kb|in_row_pages|row_overflow_pages|lob_pages|used_kb
+----------|---------|---------------|--------------|------------|------------------|---------|-------
+Order_Details|22|36|8|8|0|0|64.00
+Orders|16|36|8|8|0|0|64.00
+Products|24|36|8|8|0|0|64.00
+Reviews|16|36|8|8|0|0|64.00
+Sellers|5|27|6|6|0|0|48.00
+Users|14|27|6|6|0|0|48.00
+Cart_Items|12|18|4|4|0|0|32.00
+Categories|8|18|4|4|0|0|32.00
+Vouchers|6|9|2|2|0|0|16.00
+=== 3. DBCC IND & DBCC PAGE (8 KB Physical Page Anatomy of dbo.Products) ===
+DBCC execution completed. If DBCC printed error messages, contact your system administrator.
+DBCC execution completed. If DBCC printed error messages, contact your system administrator.
+PageFID|PagePID|PageType|IndexLevel|iam_chain_type
+-------|-------|--------|----------|--------------
+1|444|10|NULL|In-row data
+1|472|1|0|In-row data
+Inspecting Data Page (1:472) with dump style 3:
+
+PAGE: (1:472)
+
+
+
+BUFFER:
+
+
+
+BUF @0x000002F58BD0ABC0
+
+
+bpage = 0x000002F3DD0EA000          bPmmpage = 0x0000000000000000       bsort_r_nextbP = 0x000002F58BD0AB10
+
+bsort_r_prevbP = 0x000002F58BD0AC80 bhash = 0x0000000000000000          bpageno = (1:472)
+
+bpart = 3                           bstat = 0x10b                       breferences = 0
+
+berrcode = 0                        bUse1 = 26253                       bstat2 = 0x4
+
+blog = 0x15ab215a                   bsampleCount = 0                    bIoCount = 0
+
+resPoolId = 0                       bcputicks = 0                       bReadMicroSec = 372
+
+bDirtyPendingCount = 0              bDirtyContext = 0x000002F3D52E2CF0  bDbPageBroker = 0x0000000000000000
+
+bdbid = 6                           bpru = 0x000002F3A21A0040           
+
+
+PAGE HEADER:
+
+
+
+Page @0x000002F3DD0EA000
+
+
+m_pageId = (1:472)                  m_headerVersion = 1                 m_type = 1
+
+m_typeFlagBits = 0x0                m_level = 0                         m_flagBits = 0x0
+
+m_objId (AllocUnitId.idObj) = 255   m_indexId (AllocUnitId.idInd) = 256 Metadata: AllocUnitId = 72057594054639616
+
+Metadata: PartitionId = 72057594047758336                                Metadata: IndexId = 1
+
+Metadata: ObjectId = 1589580701     m_prevPage = (0:0)                  m_nextPage = (0:0)
+
+pminlen = 50                        m_slotCnt = 25                      m_freeCnt = 620
+
+m_freeData = 7778                   m_reservedCnt = 0                   m_lsn = (45:342:13)
+
+m_xactReserved = 0                  m_xdesId = (0:1794)                 m_ghostRecCnt = 1
+
+m_tornBits = -913838162             DB Frag ID = 1                      
+
+
+Allocation Status
+
+
+GAM (1:2) = ALLOCATED               SGAM (1:3) = NOT ALLOCATED          PFS (1:1) = 0x48 ALLOCATED   0_PCT_FULL
+
+DIFF (1:6) = CHANGED                ML (1:7) = NOT MIN_LOGGED           
+
+
+Slot 0 Offset 0x60 Length 298
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 298                   
+Memory Dump @0x000000F3840F4060
+
+
+0000000000000000:   30003200 01000000 01000000 02000000 015cd401  0.2..............\Ô.
+
+0000000000000014:   00000000 002d0000 00190000 0001d3c9 d1b16e62  .....-........ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 8e001e01  J.ÓÉÑ±nbJ..........
+
+000000000000003C:   2a016900 50006800 6f006e00 65002000 31003500  *.i.P.h.o.n.e. .1.5.
+
+0000000000000050:   20005000 72006f00 20004d00 61007800 20003200   .P.r.o. .M.a.x. .2.
+
+0000000000000064:   35003600 47004200 20004e00 61007400 75007200  5.6.G.B. .N.a.t.u.r.
+
+0000000000000078:   61006c00 20005400 69007400 61006e00 69007500  a.l. .T.i.t.a.n.i.u.
+
+000000000000008C:   6d004100 31003700 20005000 72006f00 20006300  m.A.1.7. .P.r.o. .c.
+
+00000000000000A0:   68006900 70002c00 20005300 75007000 65007200  h.i.p.,. .S.u.p.e.r.
+
+00000000000000B4:   20005200 65007400 69006e00 61002000 58004400   .R.e.t.i.n.a. .X.D.
+
+00000000000000C8:   52002000 64006900 73007000 6c006100 79002000  R. .d.i.s.p.l.a.y. .
+
+00000000000000DC:   77006900 74006800 20005000 72006f00 4d006f00  w.i.t.h. .P.r.o.M.o.
+
+00000000000000F0:   74006900 6f006e00 2c002000 34003800 4d005000  t.i.o.n.,. .4.8.M.P.
+
+0000000000000104:   20006d00 61006900 6e002000 63006100 6d006500   .m.a.i.n. .c.a.m.e.
+
+0000000000000118:   72006100 2e006100 63007400 69007600 6500      r.a...a.c.t.i.v.e.
+
+
+Slot 0 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 1                      
+
+
+Slot 0 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 1                       
+
+
+Slot 0 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 2                     
+
+
+Slot 0 Column 4 Offset 0x3e Length 80 Length (physical) 80
+
+
+name = iPhone 15 Pro Max 256GB Natural Titanium                          
+
+
+description = [BLOB Inline Data] Slot 0 Column 5 Offset 0x8e Length 144 Length (physical) 144
+
+
+000002F3D52F8040:   41003100 37002000 50007200 6f002000 63006800  A.1.7. .P.r.o. .c.h.
+
+000002F3D52F8054:   69007000 2c002000 53007500 70006500 72002000  i.p.,. .S.u.p.e.r. .
+
+000002F3D52F8068:   52006500 74006900 6e006100 20005800 44005200  R.e.t.i.n.a. .X.D.R.
+
+000002F3D52F807C:   20006400 69007300 70006c00 61007900 20007700   .d.i.s.p.l.a.y. .w.
+
+000002F3D52F8090:   69007400 68002000 50007200 6f004d00 6f007400  i.t.h. .P.r.o.M.o.t.
+
+000002F3D52F80A4:   69006f00 6e002c00 20003400 38004d00 50002000  i.o.n.,. .4.8.M.P. .
+
+000002F3D52F80B8:   6d006100 69006e00 20006300 61006d00 65007200  m.a.i.n. .c.a.m.e.r.
+
+000002F3D52F80CC:   61002e00                                      a...   
+
+
+Slot 0 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 1199.00                     
+
+
+Slot 0 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 45                 
+
+
+Slot 0 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 25                  
+
+
+Slot 0 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 0 Column 10 Offset 0x11e Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 0 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 0 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 0 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (8194443284a0)       
+Slot 1 Offset 0x18a Length 304
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 304                   
+Memory Dump @0x000000F3840F418A
+
+
+0000000000000000:   30003200 02000000 01000000 02000000 016cfb01  0.2..............lû.
+
+0000000000000014:   00000000 001e0000 00120000 0001d3c9 d1b16e62  ..............ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 96002401  J.ÓÉÑ±nbJ........$.
+
+000000000000003C:   30015300 61006d00 73007500 6e006700 20004700  0.S.a.m.s.u.n.g. .G.
+
+0000000000000050:   61006c00 61007800 79002000 53003200 34002000  a.l.a.x.y. .S.2.4. .
+
+0000000000000064:   55006c00 74007200 61002000 35003100 32004700  U.l.t.r.a. .5.1.2.G.
+
+0000000000000078:   42002000 54006900 74006100 6e006900 75006d00  B. .T.i.t.a.n.i.u.m.
+
+000000000000008C:   20004700 72006100 79005300 6e006100 70006400   .G.r.a.y.S.n.a.p.d.
+
+00000000000000A0:   72006100 67006f00 6e002000 38002000 47006500  r.a.g.o.n. .8. .G.e.
+
+00000000000000B4:   6e002000 33002000 66006f00 72002000 47006100  n. .3. .f.o.r. .G.a.
+
+00000000000000C8:   6c006100 78007900 2c002000 47006100 6c006100  l.a.x.y.,. .G.a.l.a.
+
+00000000000000DC:   78007900 20004100 49002000 62007500 69006c00  x.y. .A.I. .b.u.i.l.
+
+00000000000000F0:   74002d00 69006e00 2c002000 32003000 30004d00  t.-.i.n.,. .2.0.0.M.
+
+0000000000000104:   50002000 63006100 6d006500 72006100 20007300  P. .c.a.m.e.r.a. .s.
+
+0000000000000118:   79007300 74006500 6d002e00 61006300 74006900  y.s.t.e.m...a.c.t.i.
+
+000000000000012C:   76006500                                      v.e.   
+
+
+Slot 1 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 2                      
+
+
+Slot 1 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 1                       
+
+
+Slot 1 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 2                     
+
+
+Slot 1 Column 4 Offset 0x3e Length 88 Length (physical) 88
+
+
+name = Samsung Galaxy S24 Ultra 512GB Titanium Gray                      
+
+
+description = [BLOB Inline Data] Slot 1 Column 5 Offset 0x96 Length 142 Length (physical) 142
+
+
+000002F3D52C2040:   53006e00 61007000 64007200 61006700 6f006e00  S.n.a.p.d.r.a.g.o.n.
+
+000002F3D52C2054:   20003800 20004700 65006e00 20003300 20006600   .8. .G.e.n. .3. .f.
+
+000002F3D52C2068:   6f007200 20004700 61006c00 61007800 79002c00  o.r. .G.a.l.a.x.y.,.
+
+000002F3D52C207C:   20004700 61006c00 61007800 79002000 41004900   .G.a.l.a.x.y. .A.I.
+
+000002F3D52C2090:   20006200 75006900 6c007400 2d006900 6e002c00   .b.u.i.l.t.-.i.n.,.
+
+000002F3D52C20A4:   20003200 30003000 4d005000 20006300 61006d00   .2.0.0.M.P. .c.a.m.
+
+000002F3D52C20B8:   65007200 61002000 73007900 73007400 65006d00  e.r.a. .s.y.s.t.e.m.
+
+000002F3D52C20CC:   2e00                                          ..     
+
+
+Slot 1 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 1299.00                     
+
+
+Slot 1 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 30                 
+
+
+Slot 1 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 18                  
+
+
+Slot 1 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 1 Column 10 Offset 0x124 Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 1 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 1 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 1 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (61a06abd401c)       
+Slot 2 Offset 0x2ba Length 280
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 280                   
+Memory Dump @0x000000F3840F42BA
+
+
+0000000000000000:   30003200 03000000 01000000 02000000 012c5f01  0.2..............,_.
+
+0000000000000014:   00000000 00140000 000c0000 0001d3c9 d1b16e62  ..............ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 80000c01  J.ÓÉÑ±nbJ...........
+
+000000000000003C:   18014700 6f006f00 67006c00 65002000 50006900  ..G.o.o.g.l.e. .P.i.
+
+0000000000000050:   78006500 6c002000 38002000 50007200 6f002000  x.e.l. .8. .P.r.o. .
+
+0000000000000064:   31003200 38004700 42002000 4f006200 73006900  1.2.8.G.B. .O.b.s.i.
+
+0000000000000078:   64006900 61006e00 47006f00 6f006700 6c006500  d.i.a.n.G.o.o.g.l.e.
+
+000000000000008C:   20005400 65006e00 73006f00 72002000 47003300   .T.e.n.s.o.r. .G.3.
+
+00000000000000A0:   20006300 68006900 70002c00 20004700 6f006f00   .c.h.i.p.,. .G.o.o.
+
+00000000000000B4:   67006c00 65002000 41004900 20006300 61006d00  g.l.e. .A.I. .c.a.m.
+
+00000000000000C8:   65007200 61002000 63006100 70006100 62006900  e.r.a. .c.a.p.a.b.i.
+
+00000000000000DC:   6c006900 74006900 65007300 2c002000 31003200  l.i.t.i.e.s.,. .1.2.
+
+00000000000000F0:   30004800 7a002000 4c005400 50004f00 20004f00  0.H.z. .L.T.P.O. .O.
+
+0000000000000104:   4c004500 44002e00 61006300 74006900 76006500  L.E.D...a.c.t.i.v.e.
+
+
+Slot 2 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 3                      
+
+
+Slot 2 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 1                       
+
+
+Slot 2 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 2                     
+
+
+Slot 2 Column 4 Offset 0x3e Length 66 Length (physical) 66
+
+
+name = Google Pixel 8 Pro 128GB Obsidian                                 
+
+
+description = [BLOB Inline Data] Slot 2 Column 5 Offset 0x80 Length 140 Length (physical) 140
+
+
+000002F3D52F8040:   47006f00 6f006700 6c006500 20005400 65006e00  G.o.o.g.l.e. .T.e.n.
+
+000002F3D52F8054:   73006f00 72002000 47003300 20006300 68006900  s.o.r. .G.3. .c.h.i.
+
+000002F3D52F8068:   70002c00 20004700 6f006f00 67006c00 65002000  p.,. .G.o.o.g.l.e. .
+
+000002F3D52F807C:   41004900 20006300 61006d00 65007200 61002000  A.I. .c.a.m.e.r.a. .
+
+000002F3D52F8090:   63006100 70006100 62006900 6c006900 74006900  c.a.p.a.b.i.l.i.t.i.
+
+000002F3D52F80A4:   65007300 2c002000 31003200 30004800 7a002000  e.s.,. .1.2.0.H.z. .
+
+000002F3D52F80B8:   4c005400 50004f00 20004f00 4c004500 44002e00  L.T.P.O. .O.L.E.D...
+
+
+Slot 2 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 899.00                      
+
+
+Slot 2 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 20                 
+
+
+Slot 2 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 12                  
+
+
+Slot 2 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 2 Column 10 Offset 0x10c Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 2 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 2 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 2 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (98ec012aa510)       
+Slot 3 Offset 0x3d2 Length 300
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 300                   
+Memory Dump @0x000000F3840F43D2
+
+
+0000000000000000:   30003200 04000000 01000000 03000000 01dc0c03  0.2..............Ü..
+
+0000000000000014:   00000000 000f0000 00080000 0001d3c9 d1b16e62  ..............ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 8a002001  J.ÓÉÑ±nbJ........ .
+
+000000000000003C:   2c014100 70007000 6c006500 20004d00 61006300  ,.A.p.p.l.e. .M.a.c.
+
+0000000000000050:   42006f00 6f006b00 20005000 72006f00 20003100  B.o.o.k. .P.r.o. .1.
+
+0000000000000064:   34002000 4d003300 20005000 72006f00 20003100  4. .M.3. .P.r.o. .1.
+
+0000000000000078:   38004700 42002f00 35003100 32004700 42004c00  8.G.B./.5.1.2.G.B.L.
+
+000000000000008C:   69007100 75006900 64002000 52006500 74006900  i.q.u.i.d. .R.e.t.i.
+
+00000000000000A0:   6e006100 20005800 44005200 2c002000 65007800  n.a. .X.D.R.,. .e.x.
+
+00000000000000B4:   74007200 65006d00 65002000 62006100 74007400  t.r.e.m.e. .b.a.t.t.
+
+00000000000000C8:   65007200 79002000 6c006900 66006500 20007500  e.r.y. .l.i.f.e. .u.
+
+00000000000000DC:   70002000 74006f00 20003100 38002000 68006f00  p. .t.o. .1.8. .h.o.
+
+00000000000000F0:   75007200 73002c00 20005300 70006100 63006500  u.r.s.,. .S.p.a.c.e.
+
+0000000000000104:   20004200 6c006100 63006b00 20006600 69006e00   .B.l.a.c.k. .f.i.n.
+
+0000000000000118:   69007300 68002e00 61006300 74006900 76006500  i.s.h...a.c.t.i.v.e.
+
+
+Slot 3 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 4                      
+
+
+Slot 3 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 1                       
+
+
+Slot 3 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 3                     
+
+
+Slot 3 Column 4 Offset 0x3e Length 76 Length (physical) 76
+
+
+name = Apple MacBook Pro 14 M3 Pro 18GB/512GB                            
+
+
+description = [BLOB Inline Data] Slot 3 Column 5 Offset 0x8a Length 150 Length (physical) 150
+
+
+000002F3D52C2040:   4c006900 71007500 69006400 20005200 65007400  L.i.q.u.i.d. .R.e.t.
+
+000002F3D52C2054:   69006e00 61002000 58004400 52002c00 20006500  i.n.a. .X.D.R.,. .e.
+
+000002F3D52C2068:   78007400 72006500 6d006500 20006200 61007400  x.t.r.e.m.e. .b.a.t.
+
+000002F3D52C207C:   74006500 72007900 20006c00 69006600 65002000  t.e.r.y. .l.i.f.e. .
+
+000002F3D52C2090:   75007000 20007400 6f002000 31003800 20006800  u.p. .t.o. .1.8. .h.
+
+000002F3D52C20A4:   6f007500 72007300 2c002000 53007000 61006300  o.u.r.s.,. .S.p.a.c.
+
+000002F3D52C20B8:   65002000 42006c00 61006300 6b002000 66006900  e. .B.l.a.c.k. .f.i.
+
+000002F3D52C20CC:   6e006900 73006800 2e00                        n.i.s.h...
+
+
+Slot 3 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 1999.00                     
+
+
+Slot 3 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 15                 
+
+
+Slot 3 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 8                   
+
+
+Slot 3 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 3 Column 10 Offset 0x120 Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 3 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 3 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 3 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (a0c936a3c965)       
+Slot 4 Offset 0x4fe Length 268
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 268                   
+Memory Dump @0x000000F3840F44FE
+
+
+0000000000000000:   30003200 05000000 01000000 03000000 01ac9702  0.2..............¬.
+
+0000000000000014:   00000000 00120000 000a0000 0001d3c9 d1b16e62  ..............ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 8e000001  J.ÓÉÑ±nbJ..........
+
+000000000000003C:   0c014400 65006c00 6c002000 58005000 53002000  ..D.e.l.l. .X.P.S. .
+
+0000000000000050:   31003500 20003900 35003300 30002000 43006f00  1.5. .9.5.3.0. .C.o.
+
+0000000000000064:   72006500 20006900 37002d00 31003300 37003000  r.e. .i.7.-.1.3.7.0.
+
+0000000000000078:   30004800 20005200 54005800 20003400 30003600  0.H. .R.T.X. .4.0.6.
+
+000000000000008C:   30003100 35002e00 36002000 69006e00 63006800  0.1.5...6. .i.n.c.h.
+
+00000000000000A0:   20004f00 4c004500 44002000 33002e00 35004b00   .O.L.E.D. .3...5.K.
+
+00000000000000B4:   20007400 6f007500 63006800 20007300 63007200   .t.o.u.c.h. .s.c.r.
+
+00000000000000C8:   65006500 6e002c00 20003300 32004700 42002000  e.e.n.,. .3.2.G.B. .
+
+00000000000000DC:   52004100 4d002c00 20003100 54004200 20004e00  R.A.M.,. .1.T.B. .N.
+
+00000000000000F0:   56004d00 65002000 53005300 44002e00 61006300  V.M.e. .S.S.D...a.c.
+
+0000000000000104:   74006900 76006500                             t.i.v.e.
+
+
+Slot 4 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 5                      
+
+
+Slot 4 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 1                       
+
+
+Slot 4 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 3                     
+
+
+Slot 4 Column 4 Offset 0x3e Length 80 Length (physical) 80
+
+
+name = Dell XPS 15 9530 Core i7-13700H RTX 4060                          
+
+
+description = [BLOB Inline Data] Slot 4 Column 5 Offset 0x8e Length 114 Length (physical) 114
+
+
+000002F3D52F8040:   31003500 2e003600 20006900 6e006300 68002000  1.5...6. .i.n.c.h. .
+
+000002F3D52F8054:   4f004c00 45004400 20003300 2e003500 4b002000  O.L.E.D. .3...5.K. .
+
+000002F3D52F8068:   74006f00 75006300 68002000 73006300 72006500  t.o.u.c.h. .s.c.r.e.
+
+000002F3D52F807C:   65006e00 2c002000 33003200 47004200 20005200  e.n.,. .3.2.G.B. .R.
+
+000002F3D52F8090:   41004d00 2c002000 31005400 42002000 4e005600  A.M.,. .1.T.B. .N.V.
+
+000002F3D52F80A4:   4d006500 20005300 53004400 2e00               M.e. .S.S.D...
+
+
+Slot 4 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 1699.00                     
+
+
+Slot 4 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 18                 
+
+
+Slot 4 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 10                  
+
+
+Slot 4 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 4 Column 10 Offset 0x100 Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 4 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 4 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 4 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (59855d342c69)       
+Slot 5 Offset 0x60a Length 282
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 282                   
+Memory Dump @0x000000F3840F460A
+
+
+0000000000000000:   30003200 06000000 01000000 03000000 018c4902  0.2..............I.
+
+0000000000000014:   00000000 000c0000 00060000 0001d3c9 d1b16e62  ..............ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 7e000e01  J.ÓÉÑ±nbJ.......~...
+
+000000000000003C:   1a014c00 65006e00 6f007600 6f002000 54006800  ..L.e.n.o.v.o. .T.h.
+
+0000000000000050:   69006e00 6b005000 61006400 20005800 31002000  i.n.k.P.a.d. .X.1. .
+
+0000000000000064:   43006100 72006200 6f006e00 20004700 65006e00  C.a.r.b.o.n. .G.e.n.
+
+0000000000000078:   20003100 31005500 6c007400 72006100 6c006900   .1.1.U.l.t.r.a.l.i.
+
+000000000000008C:   67006800 74002000 6d006100 67006e00 65007300  g.h.t. .m.a.g.n.e.s.
+
+00000000000000A0:   69007500 6d002000 61006c00 6c006f00 79002000  i.u.m. .a.l.l.o.y. .
+
+00000000000000B4:   62006f00 64007900 2c002000 49006e00 74006500  b.o.d.y.,. .I.n.t.e.
+
+00000000000000C8:   6c002000 45007600 6f002000 43006f00 72006500  l. .E.v.o. .C.o.r.e.
+
+00000000000000DC:   20006900 37002c00 20003100 36004700 42002000   .i.7.,. .1.6.G.B. .
+
+00000000000000F0:   52004100 4d002c00 20003500 31003200 47004200  R.A.M.,. .5.1.2.G.B.
+
+0000000000000104:   20005300 53004400 2e006100 63007400 69007600   .S.S.D...a.c.t.i.v.
+
+0000000000000118:   6500                                          e.     
+
+
+Slot 5 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 6                      
+
+
+Slot 5 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 1                       
+
+
+Slot 5 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 3                     
+
+
+Slot 5 Column 4 Offset 0x3e Length 64 Length (physical) 64
+
+
+name = Lenovo ThinkPad X1 Carbon Gen 11                                  
+
+
+description = [BLOB Inline Data] Slot 5 Column 5 Offset 0x7e Length 144 Length (physical) 144
+
+
+000002F3D52C2040:   55006c00 74007200 61006c00 69006700 68007400  U.l.t.r.a.l.i.g.h.t.
+
+000002F3D52C2054:   20006d00 61006700 6e006500 73006900 75006d00   .m.a.g.n.e.s.i.u.m.
+
+000002F3D52C2068:   20006100 6c006c00 6f007900 20006200 6f006400   .a.l.l.o.y. .b.o.d.
+
+000002F3D52C207C:   79002c00 20004900 6e007400 65006c00 20004500  y.,. .I.n.t.e.l. .E.
+
+000002F3D52C2090:   76006f00 20004300 6f007200 65002000 69003700  v.o. .C.o.r.e. .i.7.
+
+000002F3D52C20A4:   2c002000 31003600 47004200 20005200 41004d00  ,. .1.6.G.B. .R.A.M.
+
+000002F3D52C20B8:   2c002000 35003100 32004700 42002000 53005300  ,. .5.1.2.G.B. .S.S.
+
+000002F3D52C20CC:   44002e00                                      D...   
+
+
+Slot 5 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 1499.00                     
+
+
+Slot 5 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 12                 
+
+
+Slot 5 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 6                   
+
+
+Slot 5 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 5 Column 10 Offset 0x10e Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 5 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 5 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 5 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (b9b173bbe8d5)       
+Slot 6 Offset 0x724 Length 356
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 356                   
+Memory Dump @0x000000F3840F4724
+
+
+0000000000000000:   30003200 07000000 01000000 01000000 01548800  0.2..............T..
+
+0000000000000014:   00000000 00280000 00230000 0001d3c9 d1b16e62  .....(...#....ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 a6005801  J.ÓÉÑ±nbJ.......¦.X.
+
+000000000000003C:   64015300 6f006e00 79002000 57004800 2d003100  d.S.o.n.y. .W.H.-.1.
+
+0000000000000050:   30003000 30005800 4d003500 20005700 69007200  0.0.0.X.M.5. .W.i.r.
+
+0000000000000064:   65006c00 65007300 73002000 4e006f00 69007300  e.l.e.s.s. .N.o.i.s.
+
+0000000000000078:   65002000 43006100 6e006300 65006c00 6c006900  e. .C.a.n.c.e.l.l.i.
+
+000000000000008C:   6e006700 20004800 65006100 64007000 68006f00  n.g. .H.e.a.d.p.h.o.
+
+00000000000000A0:   6e006500 73004900 6e006400 75007300 74007200  n.e.s.I.n.d.u.s.t.r.
+
+00000000000000B4:   79002000 6c006500 61006400 69006e00 67002000  y. .l.e.a.d.i.n.g. .
+
+00000000000000C8:   6e006f00 69007300 65002000 63006100 6e006300  n.o.i.s.e. .c.a.n.c.
+
+00000000000000DC:   65006c00 69006e00 67002c00 20003300 30002000  e.l.i.n.g.,. .3.0. .
+
+00000000000000F0:   68006f00 75007200 20006200 61007400 74006500  h.o.u.r. .b.a.t.t.e.
+
+0000000000000104:   72007900 20006c00 69006600 65002c00 20006300  r.y. .l.i.f.e.,. .c.
+
+0000000000000118:   72007900 73007400 61006c00 20006300 6c006500  r.y.s.t.a.l. .c.l.e.
+
+000000000000012C:   61007200 20006800 61006e00 64007300 2d006600  a.r. .h.a.n.d.s.-.f.
+
+0000000000000140:   72006500 65002000 63006100 6c006c00 69006e00  r.e.e. .c.a.l.l.i.n.
+
+0000000000000154:   67002e00 61006300 74006900 76006500           g...a.c.t.i.v.e.
+
+
+Slot 6 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 7                      
+
+
+Slot 6 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 1                       
+
+
+Slot 6 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 1                     
+
+
+Slot 6 Column 4 Offset 0x3e Length 104 Length (physical) 104
+
+
+name = Sony WH-1000XM5 Wireless Noise Cancelling Headphones              
+
+
+description = [BLOB Inline Data] Slot 6 Column 5 Offset 0xa6 Length 178 Length (physical) 178
+
+
+000002F3D52F8040:   49006e00 64007500 73007400 72007900 20006c00  I.n.d.u.s.t.r.y. .l.
+
+000002F3D52F8054:   65006100 64006900 6e006700 20006e00 6f006900  e.a.d.i.n.g. .n.o.i.
+
+000002F3D52F8068:   73006500 20006300 61006e00 63006500 6c006900  s.e. .c.a.n.c.e.l.i.
+
+000002F3D52F807C:   6e006700 2c002000 33003000 20006800 6f007500  n.g.,. .3.0. .h.o.u.
+
+000002F3D52F8090:   72002000 62006100 74007400 65007200 79002000  r. .b.a.t.t.e.r.y. .
+
+000002F3D52F80A4:   6c006900 66006500 2c002000 63007200 79007300  l.i.f.e.,. .c.r.y.s.
+
+000002F3D52F80B8:   74006100 6c002000 63006c00 65006100 72002000  t.a.l. .c.l.e.a.r. .
+
+000002F3D52F80CC:   68006100 6e006400 73002d00 66007200 65006500  h.a.n.d.s.-.f.r.e.e.
+
+000002F3D52F80E0:   20006300 61006c00 6c006900 6e006700 2e00       .c.a.l.l.i.n.g...
+
+
+Slot 6 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 349.00                      
+
+
+Slot 6 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 40                 
+
+
+Slot 6 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 35                  
+
+
+Slot 6 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 6 Column 10 Offset 0x158 Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 6 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 6 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 6 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (40fd182c0dd9)       
+Slot 7 Offset 0x888 Length 258
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 258                   
+Memory Dump @0x000000F3840F4888
+
+
+0000000000000000:   30003200 08000000 01000000 01000000 01446100  0.2..............Da.
+
+0000000000000014:   00000000 00320000 002a0000 0001d3c9 d1b16e62  .....2...*....ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 7c00f600  J.ÓÉÑ±nbJ.......|.ö.
+
+000000000000003C:   02014100 70007000 6c006500 20004100 69007200  ..A.p.p.l.e. .A.i.r.
+
+0000000000000050:   50006f00 64007300 20005000 72006f00 20003200  P.o.d.s. .P.r.o. .2.
+
+0000000000000064:   6e006400 20004700 65006e00 20005500 53004200  n.d. .G.e.n. .U.S.B.
+
+0000000000000078:   2d004300 48003200 20006300 68006900 70002c00  -.C.H.2. .c.h.i.p.,.
+
+000000000000008C:   20004100 64006100 70007400 69007600 65002000   .A.d.a.p.t.i.v.e. .
+
+00000000000000A0:   41007500 64006900 6f002c00 20005000 72006f00  A.u.d.i.o.,. .P.r.o.
+
+00000000000000B4:   2d006c00 65007600 65006c00 20004100 63007400  -.l.e.v.e.l. .A.c.t.
+
+00000000000000C8:   69007600 65002000 4e006f00 69007300 65002000  i.v.e. .N.o.i.s.e. .
+
+00000000000000DC:   43006100 6e006300 65006c00 6c006100 74006900  C.a.n.c.e.l.l.a.t.i.
+
+00000000000000F0:   6f006e00 2e006100 63007400 69007600 6500      o.n...a.c.t.i.v.e.
+
+
+Slot 7 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 8                      
+
+
+Slot 7 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 1                       
+
+
+Slot 7 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 1                     
+
+
+Slot 7 Column 4 Offset 0x3e Length 62 Length (physical) 62
+
+
+name = Apple AirPods Pro 2nd Gen USB-C                                   
+
+
+description = [BLOB Inline Data] Slot 7 Column 5 Offset 0x7c Length 122 Length (physical) 122
+
+
+000002F3D52C2040:   48003200 20006300 68006900 70002c00 20004100  H.2. .c.h.i.p.,. .A.
+
+000002F3D52C2054:   64006100 70007400 69007600 65002000 41007500  d.a.p.t.i.v.e. .A.u.
+
+000002F3D52C2068:   64006900 6f002c00 20005000 72006f00 2d006c00  d.i.o.,. .P.r.o.-.l.
+
+000002F3D52C207C:   65007600 65006c00 20004100 63007400 69007600  e.v.e.l. .A.c.t.i.v.
+
+000002F3D52C2090:   65002000 4e006f00 69007300 65002000 43006100  e. .N.o.i.s.e. .C.a.
+
+000002F3D52C20A4:   6e006300 65006c00 6c006100 74006900 6f006e00  n.c.e.l.l.a.t.i.o.n.
+
+000002F3D52C20B8:   2e00                                          ..     
+
+
+Slot 7 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 249.00                      
+
+
+Slot 7 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 50                 
+
+
+Slot 7 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 42                  
+
+
+Slot 7 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 7 Column 10 Offset 0xf6 Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 7 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 7 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 7 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (c9fb1da9313f)       
+Slot 8 Offset 0x98a Length 306
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 306                   
+Memory Dump @0x000000F3840F498A
+
+
+0000000000000000:   30003200 09000000 02000000 05000000 01941100  0.2.	..............
+
+0000000000000014:   00000000 00780000 00410000 0001d3c9 d1b16e62  .....x...A....ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 92002601  J.ÓÉÑ±nbJ........&.
+
+000000000000003C:   32014d00 65006e00 20005300 6c006900 6d002d00  2.M.e.n. .S.l.i.m.-.
+
+0000000000000050:   46006900 74002000 4f007800 66006f00 72006400  F.i.t. .O.x.f.o.r.d.
+
+0000000000000064:   20004400 72006500 73007300 20005300 68006900   .D.r.e.s.s. .S.h.i.
+
+0000000000000078:   72007400 20004c00 69006700 68007400 20004200  r.t. .L.i.g.h.t. .B.
+
+000000000000008C:   6c007500 65003100 30003000 25002000 70007200  l.u.e.1.0.0.%. .p.r.
+
+00000000000000A0:   65006d00 69007500 6d002000 6c006f00 6e006700  e.m.i.u.m. .l.o.n.g.
+
+00000000000000B4:   2d007300 74006100 70006c00 65002000 63006f00  -.s.t.a.p.l.e. .c.o.
+
+00000000000000C8:   74007400 6f006e00 2c002000 77007200 69006e00  t.t.o.n.,. .w.r.i.n.
+
+00000000000000DC:   6b006c00 65002d00 72006500 73006900 73007400  k.l.e.-.r.e.s.i.s.t.
+
+00000000000000F0:   61006e00 74002000 77006500 61007600 65002c00  a.n.t. .w.e.a.v.e.,.
+
+0000000000000104:   20007400 61006900 6c006f00 72006500 64002000   .t.a.i.l.o.r.e.d. .
+
+0000000000000118:   63006f00 6c006c00 61007200 2e006100 63007400  c.o.l.l.a.r...a.c.t.
+
+000000000000012C:   69007600 6500                                 i.v.e. 
+
+
+Slot 8 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 9                      
+
+
+Slot 8 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 2                       
+
+
+Slot 8 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 5                     
+
+
+Slot 8 Column 4 Offset 0x3e Length 84 Length (physical) 84
+
+
+name = Men Slim-Fit Oxford Dress Shirt Light Blue                        
+
+
+description = [BLOB Inline Data] Slot 8 Column 5 Offset 0x92 Length 148 Length (physical) 148
+
+
+000002F3D52F8040:   31003000 30002500 20007000 72006500 6d006900  1.0.0.%. .p.r.e.m.i.
+
+000002F3D52F8054:   75006d00 20006c00 6f006e00 67002d00 73007400  u.m. .l.o.n.g.-.s.t.
+
+000002F3D52F8068:   61007000 6c006500 20006300 6f007400 74006f00  a.p.l.e. .c.o.t.t.o.
+
+000002F3D52F807C:   6e002c00 20007700 72006900 6e006b00 6c006500  n.,. .w.r.i.n.k.l.e.
+
+000002F3D52F8090:   2d007200 65007300 69007300 74006100 6e007400  -.r.e.s.i.s.t.a.n.t.
+
+000002F3D52F80A4:   20007700 65006100 76006500 2c002000 74006100   .w.e.a.v.e.,. .t.a.
+
+000002F3D52F80B8:   69006c00 6f007200 65006400 20006300 6f006c00  i.l.o.r.e.d. .c.o.l.
+
+000002F3D52F80CC:   6c006100 72002e00                             l.a.r...
+
+
+Slot 8 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 45.00                       
+
+
+Slot 8 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 120                
+
+
+Slot 8 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 65                  
+
+
+Slot 8 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 8 Column 10 Offset 0x126 Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 8 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 8 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 8 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (30b7763ed433)       
+Slot 9 Offset 0xabc Length 304
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 304                   
+Memory Dump @0x000000F3840F4ABC
+
+
+0000000000000000:   30003200 0a000000 02000000 05000000 010c1700  0.2.................
+
+0000000000000014:   00000000 00500000 00280000 0001d3c9 d1b16e62  .....P...(....ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 90002401  J.ÓÉÑ±nbJ.........$.
+
+000000000000003C:   30014d00 65006e00 20004300 6c006100 73007300  0.M.e.n. .C.l.a.s.s.
+
+0000000000000050:   69006300 20005300 65006c00 76006500 64006700  i.c. .S.e.l.v.e.d.g.
+
+0000000000000064:   65002000 44006500 6e006900 6d002000 53007400  e. .D.e.n.i.m. .S.t.
+
+0000000000000078:   72006100 69006700 68007400 20004a00 65006100  r.a.i.g.h.t. .J.e.a.
+
+000000000000008C:   6e007300 4a006100 70006100 6e006500 73006500  n.s.J.a.p.a.n.e.s.e.
+
+00000000000000A0:   20007200 61007700 20007300 65006c00 76006500   .r.a.w. .s.e.l.v.e.
+
+00000000000000B4:   64006700 65002000 64006500 6e006900 6d002c00  d.g.e. .d.e.n.i.m.,.
+
+00000000000000C8:   20006400 75007200 61006200 6c006500 20006300   .d.u.r.a.b.l.e. .c.
+
+00000000000000DC:   6f007000 70006500 72002000 72006900 76006500  o.p.p.e.r. .r.i.v.e.
+
+00000000000000F0:   74007300 2c002000 74006900 6d006500 6c006500  t.s.,. .t.i.m.e.l.e.
+
+0000000000000104:   73007300 20007300 74007200 61006900 67006800  s.s. .s.t.r.a.i.g.h.
+
+0000000000000118:   74002000 63007500 74002e00 61006300 74006900  t. .c.u.t...a.c.t.i.
+
+000000000000012C:   76006500                                      v.e.   
+
+
+Slot 9 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 10                     
+
+
+Slot 9 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 2                       
+
+
+Slot 9 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 5                     
+
+
+Slot 9 Column 4 Offset 0x3e Length 82 Length (physical) 82
+
+
+name = Men Classic Selvedge Denim Straight Jeans                         
+
+
+description = [BLOB Inline Data] Slot 9 Column 5 Offset 0x90 Length 148 Length (physical) 148
+
+
+000002F3D52C2040:   4a006100 70006100 6e006500 73006500 20007200  J.a.p.a.n.e.s.e. .r.
+
+000002F3D52C2054:   61007700 20007300 65006c00 76006500 64006700  a.w. .s.e.l.v.e.d.g.
+
+000002F3D52C2068:   65002000 64006500 6e006900 6d002c00 20006400  e. .d.e.n.i.m.,. .d.
+
+000002F3D52C207C:   75007200 61006200 6c006500 20006300 6f007000  u.r.a.b.l.e. .c.o.p.
+
+000002F3D52C2090:   70006500 72002000 72006900 76006500 74007300  p.e.r. .r.i.v.e.t.s.
+
+000002F3D52C20A4:   2c002000 74006900 6d006500 6c006500 73007300  ,. .t.i.m.e.l.e.s.s.
+
+000002F3D52C20B8:   20007300 74007200 61006900 67006800 74002000   .s.t.r.a.i.g.h.t. .
+
+000002F3D52C20CC:   63007500 74002e00                             c.u.t...
+
+
+Slot 9 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 59.00                       
+
+
+Slot 9 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 80                 
+
+
+Slot 9 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 40                  
+
+
+Slot 9 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 9 Column 10 Offset 0x124 Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 9 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 9 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 9 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (d08358b1108f)       
+Slot 10 Offset 0xbec Length 300
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 300                   
+Memory Dump @0x000000F3840F4BEC
+
+
+0000000000000000:   30003200 0b000000 02000000 05000000 01d44900  0.2..............ÔI.
+
+0000000000000014:   00000000 00190000 000e0000 0001d3c9 d1b16e62  ..............ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 96002001  J.ÓÉÑ±nbJ........ .
+
+000000000000003C:   2c014700 65006e00 75006900 6e006500 20004c00  ,.G.e.n.u.i.n.e. .L.
+
+0000000000000050:   61006d00 62007300 6b006900 6e002000 4c006500  a.m.b.s.k.i.n. .L.e.
+
+0000000000000064:   61007400 68006500 72002000 42006f00 6d006200  a.t.h.e.r. .B.o.m.b.
+
+0000000000000078:   65007200 20004a00 61006300 6b006500 74002000  e.r. .J.a.c.k.e.t. .
+
+000000000000008C:   42006c00 61006300 6b005300 75007000 70006c00  B.l.a.c.k.S.u.p.p.l.
+
+00000000000000A0:   65002000 72006500 61006c00 20006c00 65006100  e. .r.e.a.l. .l.e.a.
+
+00000000000000B4:   74006800 65007200 2c002000 73006f00 66007400  t.h.e.r.,. .s.o.f.t.
+
+00000000000000C8:   20007300 69006c00 6b002000 6c006900 6e006900   .s.i.l.k. .l.i.n.i.
+
+00000000000000DC:   6e006700 2c002000 72006f00 62007500 73007400  n.g.,. .r.o.b.u.s.t.
+
+00000000000000F0:   20006d00 65007400 61006c00 20006800 61007200   .m.e.t.a.l. .h.a.r.
+
+0000000000000104:   64007700 61007200 65002000 7a006900 70007000  d.w.a.r.e. .z.i.p.p.
+
+0000000000000118:   65007200 73002e00 61006300 74006900 76006500  e.r.s...a.c.t.i.v.e.
+
+
+Slot 10 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 11                     
+
+
+Slot 10 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 2                       
+
+
+Slot 10 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 5                     
+
+
+Slot 10 Column 4 Offset 0x3e Length 88 Length (physical) 88
+
+
+name = Genuine Lambskin Leather Bomber Jacket Black                      
+
+
+description = [BLOB Inline Data] Slot 10 Column 5 Offset 0x96 Length 138 Length (physical) 138
+
+
+000002F3D52F8040:   53007500 70007000 6c006500 20007200 65006100  S.u.p.p.l.e. .r.e.a.
+
+000002F3D52F8054:   6c002000 6c006500 61007400 68006500 72002c00  l. .l.e.a.t.h.e.r.,.
+
+000002F3D52F8068:   20007300 6f006600 74002000 73006900 6c006b00   .s.o.f.t. .s.i.l.k.
+
+000002F3D52F807C:   20006c00 69006e00 69006e00 67002c00 20007200   .l.i.n.i.n.g.,. .r.
+
+000002F3D52F8090:   6f006200 75007300 74002000 6d006500 74006100  o.b.u.s.t. .m.e.t.a.
+
+000002F3D52F80A4:   6c002000 68006100 72006400 77006100 72006500  l. .h.a.r.d.w.a.r.e.
+
+000002F3D52F80B8:   20007a00 69007000 70006500 72007300 2e00       .z.i.p.p.e.r.s...
+
+
+Slot 10 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 189.00                      
+
+
+Slot 10 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 25                 
+
+
+Slot 10 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 14                  
+
+
+Slot 10 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 10 Column 10 Offset 0x120 Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 10 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 10 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 10 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (29cf3326f583)       
+Slot 11 Offset 0xd18 Length 302
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 302                   
+Memory Dump @0x000000F3840F4D18
+
+
+0000000000000000:   30003200 0c000000 02000000 06000000 01641900  0.2..............d..
+
+0000000000000014:   00000000 005a0000 00370000 0001d3c9 d1b16e62  .....Z...7....ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 84002201  J.ÓÉÑ±nbJ........".
+
+000000000000003C:   2e015700 6f006d00 65006e00 20004600 6c006f00  ..W.o.m.e.n. .F.l.o.
+
+0000000000000050:   72006100 6c002000 53006900 6c006b00 20004d00  r.a.l. .S.i.l.k. .M.
+
+0000000000000064:   61007800 69002000 53007500 6d006d00 65007200  a.x.i. .S.u.m.m.e.r.
+
+0000000000000078:   20004400 72006500 73007300 42007200 65006100   .D.r.e.s.s.B.r.e.a.
+
+000000000000008C:   74006800 61006200 6c006500 20004d00 75006c00  t.h.a.b.l.e. .M.u.l.
+
+00000000000000A0:   62006500 72007200 79002000 73006900 6c006b00  b.e.r.r.y. .s.i.l.k.
+
+00000000000000B4:   20006200 6c006500 6e006400 2c002000 68006100   .b.l.e.n.d.,. .h.a.
+
+00000000000000C8:   6e006400 2d007000 61006900 6e007400 65006400  n.d.-.p.a.i.n.t.e.d.
+
+00000000000000DC:   20006600 6c006f00 72006100 6c002000 70006100   .f.l.o.r.a.l. .p.a.
+
+00000000000000F0:   74007400 65007200 6e002c00 20004100 2d006c00  t.t.e.r.n.,. .A.-.l.
+
+0000000000000104:   69006e00 65002000 73006900 6c006800 6f007500  i.n.e. .s.i.l.h.o.u.
+
+0000000000000118:   65007400 74006500 2e006100 63007400 69007600  e.t.t.e...a.c.t.i.v.
+
+000000000000012C:   6500                                          e.     
+
+
+Slot 11 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 12                     
+
+
+Slot 11 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 2                       
+
+
+Slot 11 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 6                     
+
+
+Slot 11 Column 4 Offset 0x3e Length 70 Length (physical) 70
+
+
+name = Women Floral Silk Maxi Summer Dress                               
+
+
+description = [BLOB Inline Data] Slot 11 Column 5 Offset 0x84 Length 158 Length (physical) 158
+
+
+000002F3D52C2040:   42007200 65006100 74006800 61006200 6c006500  B.r.e.a.t.h.a.b.l.e.
+
+000002F3D52C2054:   20004d00 75006c00 62006500 72007200 79002000   .M.u.l.b.e.r.r.y. .
+
+000002F3D52C2068:   73006900 6c006b00 20006200 6c006500 6e006400  s.i.l.k. .b.l.e.n.d.
+
+000002F3D52C207C:   2c002000 68006100 6e006400 2d007000 61006900  ,. .h.a.n.d.-.p.a.i.
+
+000002F3D52C2090:   6e007400 65006400 20006600 6c006f00 72006100  n.t.e.d. .f.l.o.r.a.
+
+000002F3D52C20A4:   6c002000 70006100 74007400 65007200 6e002c00  l. .p.a.t.t.e.r.n.,.
+
+000002F3D52C20B8:   20004100 2d006c00 69006e00 65002000 73006900   .A.-.l.i.n.e. .s.i.
+
+000002F3D52C20CC:   6c006800 6f007500 65007400 74006500 2e00      l.h.o.u.e.t.t.e...
+
+
+Slot 11 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 65.00                       
+
+
+Slot 11 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 90                 
+
+
+Slot 11 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 55                  
+
+
+Slot 11 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 11 Column 10 Offset 0x122 Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 11 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 11 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 11 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (11ea04af99f6)       
+Slot 12 Offset 0xe46 Length 296
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 296                   
+Memory Dump @0x000000F3840F4E46
+
+
+0000000000000000:   30003200 0d000000 02000000 06000000 017c1500  0.2..............|..
+
+0000000000000014:   00000000 004b0000 001e0000 0001d3c9 d1b16e62  .....K........ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 90001c01  J.ÓÉÑ±nbJ...........
+
+000000000000003C:   28014800 69006700 68002d00 57006100 69007300  (.H.i.g.h.-.W.a.i.s.
+
+0000000000000050:   74006500 64002000 54006100 69006c00 6f007200  t.e.d. .T.a.i.l.o.r.
+
+0000000000000064:   65006400 20005700 6f006f00 6c002000 54007200  e.d. .W.o.o.l. .T.r.
+
+0000000000000078:   6f007500 73006500 72007300 20004200 65006900  o.u.s.e.r.s. .B.e.i.
+
+000000000000008C:   67006500 53007500 70006500 72006600 69006e00  g.e.S.u.p.e.r.f.i.n.
+
+00000000000000A0:   65002000 4d006500 72006900 6e006f00 20007700  e. .M.e.r.i.n.o. .w.
+
+00000000000000B4:   6f006f00 6c002000 62006c00 65006e00 64002c00  o.o.l. .b.l.e.n.d.,.
+
+00000000000000C8:   20007200 65006c00 61007800 65006400 20007700   .r.e.l.a.x.e.d. .w.
+
+00000000000000DC:   69006400 65002000 6c006500 67002000 77006900  i.d.e. .l.e.g. .w.i.
+
+00000000000000F0:   74006800 20006300 72006900 73007000 20006600  t.h. .c.r.i.s.p. .f.
+
+0000000000000104:   72006f00 6e007400 20007000 6c006500 61007400  r.o.n.t. .p.l.e.a.t.
+
+0000000000000118:   73002e00 61006300 74006900 76006500           s...a.c.t.i.v.e.
+
+
+Slot 12 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 13                     
+
+
+Slot 12 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 2                       
+
+
+Slot 12 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 6                     
+
+
+Slot 12 Column 4 Offset 0x3e Length 82 Length (physical) 82
+
+
+name = High-Waisted Tailored Wool Trousers Beige                         
+
+
+description = [BLOB Inline Data] Slot 12 Column 5 Offset 0x90 Length 140 Length (physical) 140
+
+
+000002F3D52F8040:   53007500 70006500 72006600 69006e00 65002000  S.u.p.e.r.f.i.n.e. .
+
+000002F3D52F8054:   4d006500 72006900 6e006f00 20007700 6f006f00  M.e.r.i.n.o. .w.o.o.
+
+000002F3D52F8068:   6c002000 62006c00 65006e00 64002c00 20007200  l. .b.l.e.n.d.,. .r.
+
+000002F3D52F807C:   65006c00 61007800 65006400 20007700 69006400  e.l.a.x.e.d. .w.i.d.
+
+000002F3D52F8090:   65002000 6c006500 67002000 77006900 74006800  e. .l.e.g. .w.i.t.h.
+
+000002F3D52F80A4:   20006300 72006900 73007000 20006600 72006f00   .c.r.i.s.p. .f.r.o.
+
+000002F3D52F80B8:   6e007400 20007000 6c006500 61007400 73002e00  n.t. .p.l.e.a.t.s...
+
+
+Slot 12 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 55.00                       
+
+
+Slot 12 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 75                 
+
+
+Slot 12 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 30                  
+
+
+Slot 12 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 12 Column 10 Offset 0x11c Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 12 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 12 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 12 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (e8a66f387cfa)       
+Slot 13 Offset 0xf6e Length 298
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 298                   
+Memory Dump @0x000000F3840F4F6E
+
+
+0000000000000000:   30003200 0e000000 02000000 06000000 01f05500  0.2..............ðU.
+
+0000000000000014:   00000000 00140000 000b0000 0001d3c9 d1b16e62  ..............ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 92001e01  J.ÓÉÑ±nbJ..........
+
+000000000000003C:   2a014300 61007300 68006d00 65007200 65002000  *.C.a.s.h.m.e.r.e. .
+
+0000000000000050:   44006f00 75006200 6c006500 2d004200 72006500  D.o.u.b.l.e.-.B.r.e.
+
+0000000000000064:   61007300 74006500 64002000 54007200 65006e00  a.s.t.e.d. .T.r.e.n.
+
+0000000000000078:   63006800 20004300 6f006100 74002000 43006100  c.h. .C.o.a.t. .C.a.
+
+000000000000008C:   6d006500 6c004c00 75007800 75007200 69006f00  m.e.l.L.u.x.u.r.i.o.
+
+00000000000000A0:   75007300 20006400 6f007500 62006c00 65002d00  u.s. .d.o.u.b.l.e.-.
+
+00000000000000B4:   66006100 63006500 64002000 4d006f00 6e006700  f.a.c.e.d. .M.o.n.g.
+
+00000000000000C8:   6f006c00 69006100 6e002000 63006100 73006800  o.l.i.a.n. .c.a.s.h.
+
+00000000000000DC:   6d006500 72006500 2c002000 62006500 6c007400  m.e.r.e.,. .b.e.l.t.
+
+00000000000000F0:   65006400 20007700 61006900 73007400 2c002000  e.d. .w.a.i.s.t.,. .
+
+0000000000000104:   68006f00 72006e00 20006200 75007400 74006f00  h.o.r.n. .b.u.t.t.o.
+
+0000000000000118:   6e007300 2e006100 63007400 69007600 6500      n.s...a.c.t.i.v.e.
+
+
+Slot 13 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 14                     
+
+
+Slot 13 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 2                       
+
+
+Slot 13 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 6                     
+
+
+Slot 13 Column 4 Offset 0x3e Length 84 Length (physical) 84
+
+
+name = Cashmere Double-Breasted Trench Coat Camel                        
+
+
+description = [BLOB Inline Data] Slot 13 Column 5 Offset 0x92 Length 140 Length (physical) 140
+
+
+000002F3D52C2040:   4c007500 78007500 72006900 6f007500 73002000  L.u.x.u.r.i.o.u.s. .
+
+000002F3D52C2054:   64006f00 75006200 6c006500 2d006600 61006300  d.o.u.b.l.e.-.f.a.c.
+
+000002F3D52C2068:   65006400 20004d00 6f006e00 67006f00 6c006900  e.d. .M.o.n.g.o.l.i.
+
+000002F3D52C207C:   61006e00 20006300 61007300 68006d00 65007200  a.n. .c.a.s.h.m.e.r.
+
+000002F3D52C2090:   65002c00 20006200 65006c00 74006500 64002000  e.,. .b.e.l.t.e.d. .
+
+000002F3D52C20A4:   77006100 69007300 74002c00 20006800 6f007200  w.a.i.s.t.,. .h.o.r.
+
+000002F3D52C20B8:   6e002000 62007500 74007400 6f006e00 73002e00  n. .b.u.t.t.o.n.s...
+
+
+Slot 13 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 220.00                      
+
+
+Slot 13 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 20                 
+
+
+Slot 13 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 11                  
+
+
+Slot 13 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 13 Column 10 Offset 0x11e Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 13 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 13 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 13 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (089241b7b846)       
+Slot 14 Offset 0x1098 Length 304
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 304                   
+Memory Dump @0x000000F3840F5098
+
+
+0000000000000000:   30003200 0f000000 03000000 08000000 01c01200  0.2..............À..
+
+0000000000000014:   00000000 00640000 00550000 0001d3c9 d1b16e62  .....d...U....ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 a0002401  J.ÓÉÑ±nbJ....... .$.
+
+000000000000003C:   30014400 65007300 69006700 6e006900 6e006700  0.D.e.s.i.g.n.i.n.g.
+
+0000000000000050:   20004400 61007400 61002d00 49006e00 74006500   .D.a.t.a.-.I.n.t.e.
+
+0000000000000064:   6e007300 69007600 65002000 41007000 70006c00  n.s.i.v.e. .A.p.p.l.
+
+0000000000000078:   69006300 61007400 69006f00 6e007300 20002800  i.c.a.t.i.o.n.s. .(.
+
+000000000000008C:   4b006c00 65007000 70006d00 61006e00 6e002900  K.l.e.p.p.m.a.n.n.).
+
+00000000000000A0:   54006800 65002000 62006900 67002000 69006400  T.h.e. .b.i.g. .i.d.
+
+00000000000000B4:   65006100 73002000 62006500 68006900 6e006400  e.a.s. .b.e.h.i.n.d.
+
+00000000000000C8:   20007200 65006c00 69006100 62006c00 65002c00   .r.e.l.i.a.b.l.e.,.
+
+00000000000000DC:   20007300 63006100 6c006100 62006c00 65002c00   .s.c.a.l.a.b.l.e.,.
+
+00000000000000F0:   20006100 6e006400 20006d00 61006900 6e007400   .a.n.d. .m.a.i.n.t.
+
+0000000000000104:   61006900 6e006100 62006c00 65002000 73007900  a.i.n.a.b.l.e. .s.y.
+
+0000000000000118:   73007400 65006d00 73002e00 61006300 74006900  s.t.e.m.s...a.c.t.i.
+
+000000000000012C:   76006500                                      v.e.   
+
+
+Slot 14 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 15                     
+
+
+Slot 14 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 3                       
+
+
+Slot 14 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 8                     
+
+
+Slot 14 Column 4 Offset 0x3e Length 98 Length (physical) 98
+
+
+name = Designing Data-Intensive Applications (Kleppmann)                 
+
+
+description = [BLOB Inline Data] Slot 14 Column 5 Offset 0xa0 Length 132 Length (physical) 132
+
+
+000002F3D52F8040:   54006800 65002000 62006900 67002000 69006400  T.h.e. .b.i.g. .i.d.
+
+000002F3D52F8054:   65006100 73002000 62006500 68006900 6e006400  e.a.s. .b.e.h.i.n.d.
+
+000002F3D52F8068:   20007200 65006c00 69006100 62006c00 65002c00   .r.e.l.i.a.b.l.e.,.
+
+000002F3D52F807C:   20007300 63006100 6c006100 62006c00 65002c00   .s.c.a.l.a.b.l.e.,.
+
+000002F3D52F8090:   20006100 6e006400 20006d00 61006900 6e007400   .a.n.d. .m.a.i.n.t.
+
+000002F3D52F80A4:   61006900 6e006100 62006c00 65002000 73007900  a.i.n.a.b.l.e. .s.y.
+
+000002F3D52F80B8:   73007400 65006d00 73002e00                    s.t.e.m.s...
+
+
+Slot 14 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 48.00                       
+
+
+Slot 14 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 100                
+
+
+Slot 14 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 85                  
+
+
+Slot 14 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 14 Column 10 Offset 0x124 Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 14 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 14 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 14 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (f1de2a205d4a)       
+Slot 15 Offset 0x11c8 Length 344
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 344                   
+Memory Dump @0x000000F3840F51C8
+
+
+0000000000000000:   30003200 10000000 03000000 08000000 01681000  0.2..............h..
+
+0000000000000014:   00000000 00550000 00460000 0001d3c9 d1b16e62  .....U...F....ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 bc004c01  J.ÓÉÑ±nbJ.......¼.L.
+
+000000000000003C:   58014300 6c006500 61006e00 20004300 6f006400  X.C.l.e.a.n. .C.o.d.
+
+0000000000000050:   65003a00 20004100 20004800 61006e00 64006200  e.:. .A. .H.a.n.d.b.
+
+0000000000000064:   6f006f00 6b002000 6f006600 20004100 67006900  o.o.k. .o.f. .A.g.i.
+
+0000000000000078:   6c006500 20005300 6f006600 74007700 61007200  l.e. .S.o.f.t.w.a.r.
+
+000000000000008C:   65002000 43007200 61006600 74007300 6d006100  e. .C.r.a.f.t.s.m.a.
+
+00000000000000A0:   6e007300 68006900 70002000 28004d00 61007200  n.s.h.i.p. .(.M.a.r.
+
+00000000000000B4:   74006900 6e002900 50007200 69006e00 63006900  t.i.n.).P.r.i.n.c.i.
+
+00000000000000C8:   70006c00 65007300 2c002000 70006100 74007400  p.l.e.s.,. .p.a.t.t.
+
+00000000000000DC:   65007200 6e007300 2c002000 61006e00 64002000  e.r.n.s.,. .a.n.d. .
+
+00000000000000F0:   70007200 61006300 74006900 63006500 73002000  p.r.a.c.t.i.c.e.s. .
+
+0000000000000104:   6f006600 20007700 72006900 74006900 6e006700  o.f. .w.r.i.t.i.n.g.
+
+0000000000000118:   20006d00 61006900 6e007400 61006900 6e006100   .m.a.i.n.t.a.i.n.a.
+
+000000000000012C:   62006c00 65002c00 20006300 6c006500 61006e00  b.l.e.,. .c.l.e.a.n.
+
+0000000000000140:   20006300 6f006400 65002e00 61006300 74006900   .c.o.d.e...a.c.t.i.
+
+0000000000000154:   76006500                                      v.e.   
+
+
+Slot 15 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 16                     
+
+
+Slot 15 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 3                       
+
+
+Slot 15 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 8                     
+
+
+Slot 15 Column 4 Offset 0x3e Length 126 Length (physical) 126
+
+
+name = Clean Code: A Handbook of Agile Software Craftsmanship (Martin)   
+
+
+description = [BLOB Inline Data] Slot 15 Column 5 Offset 0xbc Length 144 Length (physical) 144
+
+
+000002F3D52C2040:   50007200 69006e00 63006900 70006c00 65007300  P.r.i.n.c.i.p.l.e.s.
+
+000002F3D52C2054:   2c002000 70006100 74007400 65007200 6e007300  ,. .p.a.t.t.e.r.n.s.
+
+000002F3D52C2068:   2c002000 61006e00 64002000 70007200 61006300  ,. .a.n.d. .p.r.a.c.
+
+000002F3D52C207C:   74006900 63006500 73002000 6f006600 20007700  t.i.c.e.s. .o.f. .w.
+
+000002F3D52C2090:   72006900 74006900 6e006700 20006d00 61006900  r.i.t.i.n.g. .m.a.i.
+
+000002F3D52C20A4:   6e007400 61006900 6e006100 62006c00 65002c00  n.t.a.i.n.a.b.l.e.,.
+
+000002F3D52C20B8:   20006300 6c006500 61006e00 20006300 6f006400   .c.l.e.a.n. .c.o.d.
+
+000002F3D52C20CC:   65002e00                                      e...   
+
+
+Slot 15 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 42.00                       
+
+
+Slot 15 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 85                 
+
+
+Slot 15 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 70                  
+
+
+Slot 15 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 15 Column 10 Offset 0x14c Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 15 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 15 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 15 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (f07ed88b2b23)       
+Slot 16 Offset 0x1320 Length 334
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 334                   
+Memory Dump @0x000000F3840F5320
+
+
+0000000000000000:   30003200 11000000 03000000 08000000 01342100  0.2..............4!.
+
+0000000000000014:   00000000 00280000 001c0000 0001d3c9 d1b16e62  .....(........ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 a4004201  J.ÓÉÑ±nbJ.......¤.B.
+
+000000000000003C:   4e014400 61007400 61006200 61007300 65002000  N.D.a.t.a.b.a.s.e. .
+
+0000000000000050:   53007900 73007400 65006d00 20004300 6f006e00  S.y.s.t.e.m. .C.o.n.
+
+0000000000000064:   63006500 70007400 73002000 37007400 68002000  c.e.p.t.s. .7.t.h. .
+
+0000000000000078:   45006400 69007400 69006f00 6e002000 28005300  E.d.i.t.i.o.n. .(.S.
+
+000000000000008C:   69006c00 62006500 72007300 63006800 61007400  i.l.b.e.r.s.c.h.a.t.
+
+00000000000000A0:   7a002900 46006f00 75006e00 64006100 74006900  z.).F.o.u.n.d.a.t.i.
+
+00000000000000B4:   6f006e00 61006c00 20007200 65006c00 61007400  o.n.a.l. .r.e.l.a.t.
+
+00000000000000C8:   69006f00 6e006100 6c002000 74006800 65006f00  i.o.n.a.l. .t.h.e.o.
+
+00000000000000DC:   72007900 2c002000 69006e00 64006500 78006900  r.y.,. .i.n.d.e.x.i.
+
+00000000000000F0:   6e006700 2c002000 71007500 65007200 79002000  n.g.,. .q.u.e.r.y. .
+
+0000000000000104:   6f007000 74006900 6d006900 7a006100 74006900  o.p.t.i.m.i.z.a.t.i.
+
+0000000000000118:   6f006e00 2c002000 61006e00 64002000 74007200  o.n.,. .a.n.d. .t.r.
+
+000000000000012C:   61006e00 73006100 63007400 69006f00 6e007300  a.n.s.a.c.t.i.o.n.s.
+
+0000000000000140:   2e006100 63007400 69007600 6500               ..a.c.t.i.v.e.
+
+
+Slot 16 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 17                     
+
+
+Slot 16 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 3                       
+
+
+Slot 16 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 8                     
+
+
+Slot 16 Column 4 Offset 0x3e Length 102 Length (physical) 102
+
+
+name = Database System Concepts 7th Edition (Silberschatz)               
+
+
+description = [BLOB Inline Data] Slot 16 Column 5 Offset 0xa4 Length 158 Length (physical) 158
+
+
+000002F3D52F8040:   46006f00 75006e00 64006100 74006900 6f006e00  F.o.u.n.d.a.t.i.o.n.
+
+000002F3D52F8054:   61006c00 20007200 65006c00 61007400 69006f00  a.l. .r.e.l.a.t.i.o.
+
+000002F3D52F8068:   6e006100 6c002000 74006800 65006f00 72007900  n.a.l. .t.h.e.o.r.y.
+
+000002F3D52F807C:   2c002000 69006e00 64006500 78006900 6e006700  ,. .i.n.d.e.x.i.n.g.
+
+000002F3D52F8090:   2c002000 71007500 65007200 79002000 6f007000  ,. .q.u.e.r.y. .o.p.
+
+000002F3D52F80A4:   74006900 6d006900 7a006100 74006900 6f006e00  t.i.m.i.z.a.t.i.o.n.
+
+000002F3D52F80B8:   2c002000 61006e00 64002000 74007200 61006e00  ,. .a.n.d. .t.r.a.n.
+
+000002F3D52F80CC:   73006100 63007400 69006f00 6e007300 2e00      s.a.c.t.i.o.n.s...
+
+
+Slot 16 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 85.00                       
+
+
+Slot 16 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 40                 
+
+
+Slot 16 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 28                  
+
+
+Slot 16 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 16 Column 10 Offset 0x142 Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 16 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 16 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 16 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (0932b31cce2f)       
+Slot 17 Offset 0x146e Length 318
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 318                   
+Memory Dump @0x000000F3840F546E
+
+
+0000000000000000:   30003200 12000000 03000000 08000000 01d80e00  0.2..............Ø..
+
+0000000000000014:   00000000 006e0000 005f0000 0001d3c9 d1b16e62  .....n..._....ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 a2003201  J.ÓÉÑ±nbJ.......¢.2.
+
+000000000000003C:   3e015300 79007300 74006500 6d002000 44006500  >.S.y.s.t.e.m. .D.e.
+
+0000000000000050:   73006900 67006e00 20004900 6e007400 65007200  s.i.g.n. .I.n.t.e.r.
+
+0000000000000064:   76006900 65007700 20004100 6e002000 49006e00  v.i.e.w. .A.n. .I.n.
+
+0000000000000078:   73006900 64006500 72002000 47007500 69006400  s.i.d.e.r. .G.u.i.d.
+
+000000000000008C:   65002000 28004100 6c006500 78002000 58007500  e. .(.A.l.e.x. .X.u.
+
+00000000000000A0:   29005300 74006500 70002d00 62007900 2d007300  ).S.t.e.p.-.b.y.-.s.
+
+00000000000000B4:   74006500 70002000 66007200 61006d00 65007700  t.e.p. .f.r.a.m.e.w.
+
+00000000000000C8:   6f007200 6b002000 74006f00 20006d00 61007300  o.r.k. .t.o. .m.a.s.
+
+00000000000000DC:   74006500 72002000 6c006100 72006700 65002d00  t.e.r. .l.a.r.g.e.-.
+
+00000000000000F0:   73006300 61006c00 65002000 64006900 73007400  s.c.a.l.e. .d.i.s.t.
+
+0000000000000104:   72006900 62007500 74006500 64002000 73007900  r.i.b.u.t.e.d. .s.y.
+
+0000000000000118:   73007400 65006d00 73002000 64006500 73006900  s.t.e.m.s. .d.e.s.i.
+
+000000000000012C:   67006e00 2e006100 63007400 69007600 6500      g.n...a.c.t.i.v.e.
+
+
+Slot 17 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 18                     
+
+
+Slot 17 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 3                       
+
+
+Slot 17 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 8                     
+
+
+Slot 17 Column 4 Offset 0x3e Length 100 Length (physical) 100
+
+
+name = System Design Interview An Insider Guide (Alex Xu)                
+
+
+description = [BLOB Inline Data] Slot 17 Column 5 Offset 0xa2 Length 144 Length (physical) 144
+
+
+000002F3D52C2040:   53007400 65007000 2d006200 79002d00 73007400  S.t.e.p.-.b.y.-.s.t.
+
+000002F3D52C2054:   65007000 20006600 72006100 6d006500 77006f00  e.p. .f.r.a.m.e.w.o.
+
+000002F3D52C2068:   72006b00 20007400 6f002000 6d006100 73007400  r.k. .t.o. .m.a.s.t.
+
+000002F3D52C207C:   65007200 20006c00 61007200 67006500 2d007300  e.r. .l.a.r.g.e.-.s.
+
+000002F3D52C2090:   63006100 6c006500 20006400 69007300 74007200  c.a.l.e. .d.i.s.t.r.
+
+000002F3D52C20A4:   69006200 75007400 65006400 20007300 79007300  i.b.u.t.e.d. .s.y.s.
+
+000002F3D52C20B8:   74006500 6d007300 20006400 65007300 69006700  t.e.m.s. .d.e.s.i.g.
+
+000002F3D52C20CC:   6e002e00                                      n...   
+
+
+Slot 17 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 38.00                       
+
+
+Slot 17 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 110                
+
+
+Slot 17 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 95                  
+
+
+Slot 17 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 17 Column 10 Offset 0x132 Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 17 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 17 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 17 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (e9069d930a93)       
+Slot 18 Offset 0x15ac Length 298
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 298                   
+Memory Dump @0x000000F3840F55AC
+
+
+0000000000000000:   30003200 13000000 04000000 07000000 01606d00  0.2..............`m.
+
+0000000000000014:   00000000 00230000 00140000 0001d3c9 d1b16e62  .....#........ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 90001e01  J.ÓÉÑ±nbJ...........
+
+000000000000003C:   2a014500 72006700 6f006e00 6f006d00 69006300  *.E.r.g.o.n.o.m.i.c.
+
+0000000000000050:   20004d00 65007300 68002000 48006900 67006800   .M.e.s.h. .H.i.g.h.
+
+0000000000000064:   2d004200 61006300 6b002000 4f006600 66006900  -.B.a.c.k. .O.f.f.i.
+
+0000000000000078:   63006500 20004300 68006100 69007200 20005000  c.e. .C.h.a.i.r. .P.
+
+000000000000008C:   72006f00 44007900 6e006100 6d006900 63002000  r.o.D.y.n.a.m.i.c. .
+
+00000000000000A0:   6c007500 6d006200 61007200 20007300 75007000  l.u.m.b.a.r. .s.u.p.
+
+00000000000000B4:   70006f00 72007400 2c002000 34004400 20006100  p.o.r.t.,. .4.D. .a.
+
+00000000000000C8:   64006a00 75007300 74006100 62006c00 65002000  d.j.u.s.t.a.b.l.e. .
+
+00000000000000DC:   61007200 6d007200 65007300 74007300 2c002000  a.r.m.r.e.s.t.s.,. .
+
+00000000000000F0:   62007200 65006100 74006800 61006200 6c006500  b.r.e.a.t.h.a.b.l.e.
+
+0000000000000104:   20004b00 6f007200 65006100 6e002000 6d006500   .K.o.r.e.a.n. .m.e.
+
+0000000000000118:   73006800 2e006100 63007400 69007600 6500      s.h...a.c.t.i.v.e.
+
+
+Slot 18 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 19                     
+
+
+Slot 18 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 4                       
+
+
+Slot 18 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 7                     
+
+
+Slot 18 Column 4 Offset 0x3e Length 82 Length (physical) 82
+
+
+name = Ergonomic Mesh High-Back Office Chair Pro                         
+
+
+description = [BLOB Inline Data] Slot 18 Column 5 Offset 0x90 Length 142 Length (physical) 142
+
+
+000002F3D52F8040:   44007900 6e006100 6d006900 63002000 6c007500  D.y.n.a.m.i.c. .l.u.
+
+000002F3D52F8054:   6d006200 61007200 20007300 75007000 70006f00  m.b.a.r. .s.u.p.p.o.
+
+000002F3D52F8068:   72007400 2c002000 34004400 20006100 64006a00  r.t.,. .4.D. .a.d.j.
+
+000002F3D52F807C:   75007300 74006100 62006c00 65002000 61007200  u.s.t.a.b.l.e. .a.r.
+
+000002F3D52F8090:   6d007200 65007300 74007300 2c002000 62007200  m.r.e.s.t.s.,. .b.r.
+
+000002F3D52F80A4:   65006100 74006800 61006200 6c006500 20004b00  e.a.t.h.a.b.l.e. .K.
+
+000002F3D52F80B8:   6f007200 65006100 6e002000 6d006500 73006800  o.r.e.a.n. .m.e.s.h.
+
+000002F3D52F80CC:   2e00                                          ..     
+
+
+Slot 18 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 280.00                      
+
+
+Slot 18 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 35                 
+
+
+Slot 18 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 20                  
+
+
+Slot 18 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 18 Column 10 Offset 0x11e Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 18 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 18 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 18 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (104af604ef9f)       
+Slot 19 Offset 0x16d6 Length 298
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 298                   
+Memory Dump @0x000000F3840F56D6
+
+
+0000000000000000:   30003200 14000000 04000000 07000000 01ecc200  0.2..............ìÂ.
+
+0000000000000014:   00000000 00160000 000f0000 0001d3c9 d1b16e62  ..............ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 8e001e01  J.ÓÉÑ±nbJ..........
+
+000000000000003C:   2a015300 6d006100 72007400 20005200 6f006200  *.S.m.a.r.t. .R.o.b.
+
+0000000000000050:   6f007400 20005600 61006300 75007500 6d002000  o.t. .V.a.c.u.u.m. .
+
+0000000000000064:   26002000 4d006f00 70002000 43006c00 65006100  &. .M.o.p. .C.l.e.a.
+
+0000000000000078:   6e006500 72002000 58003100 30002000 50007200  n.e.r. .X.1.0. .P.r.
+
+000000000000008C:   6f004c00 69004400 41005200 20005300 4c004100  o.L.i.D.A.R. .S.L.A.
+
+00000000000000A0:   4d002000 6e006100 76006900 67006100 74006900  M. .n.a.v.i.g.a.t.i.
+
+00000000000000B4:   6f006e00 2c002000 35003000 30003000 50006100  o.n.,. .5.0.0.0.P.a.
+
+00000000000000C8:   20007300 75006300 74006900 6f006e00 20007000   .s.u.c.t.i.o.n. .p.
+
+00000000000000DC:   6f007700 65007200 2c002000 61007500 74006f00  o.w.e.r.,. .a.u.t.o.
+
+00000000000000F0:   2d006500 6d007000 74007900 20006400 75007300  -.e.m.p.t.y. .d.u.s.
+
+0000000000000104:   74006200 69006e00 20007300 74006100 74006900  t.b.i.n. .s.t.a.t.i.
+
+0000000000000118:   6f006e00 2e006100 63007400 69007600 6500      o.n...a.c.t.i.v.e.
+
+
+Slot 19 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 20                     
+
+
+Slot 19 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 4                       
+
+
+Slot 19 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 7                     
+
+
+Slot 19 Column 4 Offset 0x3e Length 80 Length (physical) 80
+
+
+name = Smart Robot Vacuum & Mop Cleaner X10 Pro                          
+
+
+description = [BLOB Inline Data] Slot 19 Column 5 Offset 0x8e Length 144 Length (physical) 144
+
+
+000002F3D52C2040:   4c006900 44004100 52002000 53004c00 41004d00  L.i.D.A.R. .S.L.A.M.
+
+000002F3D52C2054:   20006e00 61007600 69006700 61007400 69006f00   .n.a.v.i.g.a.t.i.o.
+
+000002F3D52C2068:   6e002c00 20003500 30003000 30005000 61002000  n.,. .5.0.0.0.P.a. .
+
+000002F3D52C207C:   73007500 63007400 69006f00 6e002000 70006f00  s.u.c.t.i.o.n. .p.o.
+
+000002F3D52C2090:   77006500 72002c00 20006100 75007400 6f002d00  w.e.r.,. .a.u.t.o.-.
+
+000002F3D52C20A4:   65006d00 70007400 79002000 64007500 73007400  e.m.p.t.y. .d.u.s.t.
+
+000002F3D52C20B8:   62006900 6e002000 73007400 61007400 69006f00  b.i.n. .s.t.a.t.i.o.
+
+000002F3D52C20CC:   6e002e00                                      n...   
+
+
+Slot 19 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 499.00                      
+
+
+Slot 19 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 22                 
+
+
+Slot 19 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 15                  
+
+
+Slot 19 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 19 Column 10 Offset 0x11e Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 19 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 19 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 19 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (286fc18d83ea)       
+Slot 20 Offset 0x1800 Length 328
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 328                   
+Memory Dump @0x000000F3840F5800
+
+
+0000000000000000:   30003200 15000000 04000000 07000000 01643200  0.2..............d2.
+
+0000000000000014:   00000000 00370000 00260000 0001d3c9 d1b16e62  .....7...&....ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 98003c01  J.ÓÉÑ±nbJ.........<.
+
+000000000000003C:   48014400 69006700 69007400 61006c00 20004100  H.D.i.g.i.t.a.l. .A.
+
+0000000000000050:   69007200 20004600 72007900 65007200 20005800  i.r. .F.r.y.e.r. .X.
+
+0000000000000064:   58004c00 20003600 2e003500 20004c00 69007400  X.L. .6...5. .L.i.t.
+
+0000000000000078:   65007200 73002000 54006f00 75006300 68002000  e.r.s. .T.o.u.c.h. .
+
+000000000000008C:   53006300 72006500 65006e00 52006100 70006900  S.c.r.e.e.n.R.a.p.i.
+
+00000000000000A0:   64002000 61006900 72002000 63006900 72006300  d. .a.i.r. .c.i.r.c.
+
+00000000000000B4:   75006c00 61007400 69006f00 6e002c00 20003100  u.l.a.t.i.o.n.,. .1.
+
+00000000000000C8:   32002000 73006d00 61007200 74002000 63006f00  2. .s.m.a.r.t. .c.o.
+
+00000000000000DC:   6f006b00 69006e00 67002000 70007200 65007300  o.k.i.n.g. .p.r.e.s.
+
+00000000000000F0:   65007400 73002c00 20006e00 6f006e00 2d007300  e.t.s.,. .n.o.n.-.s.
+
+0000000000000104:   74006900 63006b00 20006400 69007300 68007700  t.i.c.k. .d.i.s.h.w.
+
+0000000000000118:   61007300 68006500 72002d00 73006100 66006500  a.s.h.e.r.-.s.a.f.e.
+
+000000000000012C:   20006200 61007300 6b006500 74002e00 61006300   .b.a.s.k.e.t...a.c.
+
+0000000000000140:   74006900 76006500                             t.i.v.e.
+
+
+Slot 20 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 21                     
+
+
+Slot 20 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 4                       
+
+
+Slot 20 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 7                     
+
+
+Slot 20 Column 4 Offset 0x3e Length 90 Length (physical) 90
+
+
+name = Digital Air Fryer XXL 6.5 Liters Touch Screen                     
+
+
+description = [BLOB Inline Data] Slot 20 Column 5 Offset 0x98 Length 164 Length (physical) 164
+
+
+000002F3D52F8040:   52006100 70006900 64002000 61006900 72002000  R.a.p.i.d. .a.i.r. .
+
+000002F3D52F8054:   63006900 72006300 75006c00 61007400 69006f00  c.i.r.c.u.l.a.t.i.o.
+
+000002F3D52F8068:   6e002c00 20003100 32002000 73006d00 61007200  n.,. .1.2. .s.m.a.r.
+
+000002F3D52F807C:   74002000 63006f00 6f006b00 69006e00 67002000  t. .c.o.o.k.i.n.g. .
+
+000002F3D52F8090:   70007200 65007300 65007400 73002c00 20006e00  p.r.e.s.e.t.s.,. .n.
+
+000002F3D52F80A4:   6f006e00 2d007300 74006900 63006b00 20006400  o.n.-.s.t.i.c.k. .d.
+
+000002F3D52F80B8:   69007300 68007700 61007300 68006500 72002d00  i.s.h.w.a.s.h.e.r.-.
+
+000002F3D52F80CC:   73006100 66006500 20006200 61007300 6b006500  s.a.f.e. .b.a.s.k.e.
+
+000002F3D52F80E0:   74002e00                                      t...   
+
+
+Slot 20 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 129.00                      
+
+
+Slot 20 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 55                 
+
+
+Slot 20 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 38                  
+
+
+Slot 20 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 20 Column 10 Offset 0x13c Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 20 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 20 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 20 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (d123aa1a66e6)       
+Slot 21 Offset 0x1948 Length 302
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 302                   
+Memory Dump @0x000000F3840F5948
+
+
+0000000000000000:   30003200 16000000 05000000 04000000 01c83200  0.2..............È2.
+
+0000000000000014:   00000000 003c0000 002d0000 0001d3c9 d1b16e62  .....<...-....ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 88002201  J.ÓÉÑ±nbJ.........".
+
+000000000000003C:   2e015000 72006f00 20005200 75006e00 6e006900  ..P.r.o. .R.u.n.n.i.
+
+0000000000000050:   6e006700 20005300 68006f00 65007300 20004100  n.g. .S.h.o.e.s. .A.
+
+0000000000000064:   69007200 20005a00 6f006f00 6d002000 50006500  i.r. .Z.o.o.m. .P.e.
+
+0000000000000078:   67006100 73007500 73002000 34003000 44007500  g.a.s.u.s. .4.0.D.u.
+
+000000000000008C:   61006c00 20005a00 6f006f00 6d002000 41006900  a.l. .Z.o.o.m. .A.i.
+
+00000000000000A0:   72002000 75006e00 69007400 73002c00 20007200  r. .u.n.i.t.s.,. .r.
+
+00000000000000B4:   65007300 70006f00 6e007300 69007600 65002000  e.s.p.o.n.s.i.v.e. .
+
+00000000000000C8:   52006500 61006300 74002000 66006f00 61006d00  R.e.a.c.t. .f.o.a.m.
+
+00000000000000DC:   2c002000 62007200 65006100 74006800 61006200  ,. .b.r.e.a.t.h.a.b.
+
+00000000000000F0:   6c006500 20006500 6e006700 69006e00 65006500  l.e. .e.n.g.i.n.e.e.
+
+0000000000000104:   72006500 64002000 6d006500 73006800 20007500  r.e.d. .m.e.s.h. .u.
+
+0000000000000118:   70007000 65007200 2e006100 63007400 69007600  p.p.e.r...a.c.t.i.v.
+
+000000000000012C:   6500                                          e.     
+
+
+Slot 21 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 22                     
+
+
+Slot 21 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 5                       
+
+
+Slot 21 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 4                     
+
+
+Slot 21 Column 4 Offset 0x3e Length 74 Length (physical) 74
+
+
+name = Pro Running Shoes Air Zoom Pegasus 40                             
+
+
+description = [BLOB Inline Data] Slot 21 Column 5 Offset 0x88 Length 154 Length (physical) 154
+
+
+000002F3D52C2040:   44007500 61006c00 20005a00 6f006f00 6d002000  D.u.a.l. .Z.o.o.m. .
+
+000002F3D52C2054:   41006900 72002000 75006e00 69007400 73002c00  A.i.r. .u.n.i.t.s.,.
+
+000002F3D52C2068:   20007200 65007300 70006f00 6e007300 69007600   .r.e.s.p.o.n.s.i.v.
+
+000002F3D52C207C:   65002000 52006500 61006300 74002000 66006f00  e. .R.e.a.c.t. .f.o.
+
+000002F3D52C2090:   61006d00 2c002000 62007200 65006100 74006800  a.m.,. .b.r.e.a.t.h.
+
+000002F3D52C20A4:   61006200 6c006500 20006500 6e006700 69006e00  a.b.l.e. .e.n.g.i.n.
+
+000002F3D52C20B8:   65006500 72006500 64002000 6d006500 73006800  e.e.r.e.d. .m.e.s.h.
+
+000002F3D52C20CC:   20007500 70007000 65007200 2e00                .u.p.p.e.r...
+
+
+Slot 21 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 130.00                      
+
+
+Slot 21 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 60                 
+
+
+Slot 21 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 45                  
+
+
+Slot 21 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 21 Column 10 Offset 0x122 Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 21 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 21 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 21 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (31178495a25a)       
+Slot 22 Offset 0x1a76 Length 306
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 306                   
+Memory Dump @0x000000F3840F5A76
+
+
+0000000000000000:   30003200 17000000 05000000 07000000 01ac0d00  0.2..............¬..
+
+0000000000000014:   00000000 00960000 00500000 0001d3c9 d1b16e62  ........P....ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 8a002601  J.ÓÉÑ±nbJ........&.
+
+000000000000003C:   32014500 63006f00 2d004600 72006900 65006e00  2.E.c.o.-.F.r.i.e.n.
+
+0000000000000050:   64006c00 79002000 4e006f00 6e002d00 53006c00  d.l.y. .N.o.n.-.S.l.
+
+0000000000000064:   69007000 20005900 6f006700 61002000 4d006100  i.p. .Y.o.g.a. .M.a.
+
+0000000000000078:   74002000 36006d00 6d002000 54005000 45004400  t. .6.m.m. .T.P.E.D.
+
+000000000000008C:   75006100 6c002d00 6c006100 79006500 72002000  u.a.l.-.l.a.y.e.r. .
+
+00000000000000A0:   6e006f00 6e002d00 73006c00 69007000 20007400  n.o.n.-.s.l.i.p. .t.
+
+00000000000000B4:   65007800 74007500 72006500 2c002000 6c006900  e.x.t.u.r.e.,. .l.i.
+
+00000000000000C8:   67006800 74007700 65006900 67006800 74002000  g.h.t.w.e.i.g.h.t. .
+
+00000000000000DC:   77006900 74006800 20006300 61007200 72007900  w.i.t.h. .c.a.r.r.y.
+
+00000000000000F0:   69006e00 67002000 73007400 72006100 70002c00  i.n.g. .s.t.r.a.p.,.
+
+0000000000000104:   20006100 6c006900 67006e00 6d006500 6e007400   .a.l.i.g.n.m.e.n.t.
+
+0000000000000118:   20006c00 69006e00 65007300 2e006100 63007400   .l.i.n.e.s...a.c.t.
+
+000000000000012C:   69007600 6500                                 i.v.e. 
+
+
+Slot 22 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 23                     
+
+
+Slot 22 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 5                       
+
+
+Slot 22 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 7                     
+
+
+Slot 22 Column 4 Offset 0x3e Length 76 Length (physical) 76
+
+
+name = Eco-Friendly Non-Slip Yoga Mat 6mm TPE                            
+
+
+description = [BLOB Inline Data] Slot 22 Column 5 Offset 0x8a Length 156 Length (physical) 156
+
+
+000002F3D52F8040:   44007500 61006c00 2d006c00 61007900 65007200  D.u.a.l.-.l.a.y.e.r.
+
+000002F3D52F8054:   20006e00 6f006e00 2d007300 6c006900 70002000   .n.o.n.-.s.l.i.p. .
+
+000002F3D52F8068:   74006500 78007400 75007200 65002c00 20006c00  t.e.x.t.u.r.e.,. .l.
+
+000002F3D52F807C:   69006700 68007400 77006500 69006700 68007400  i.g.h.t.w.e.i.g.h.t.
+
+000002F3D52F8090:   20007700 69007400 68002000 63006100 72007200   .w.i.t.h. .c.a.r.r.
+
+000002F3D52F80A4:   79006900 6e006700 20007300 74007200 61007000  y.i.n.g. .s.t.r.a.p.
+
+000002F3D52F80B8:   2c002000 61006c00 69006700 6e006d00 65006e00  ,. .a.l.i.g.n.m.e.n.
+
+000002F3D52F80CC:   74002000 6c006900 6e006500 73002e00           t. .l.i.n.e.s...
+
+
+Slot 22 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 35.00                       
+
+
+Slot 22 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 150                
+
+
+Slot 22 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 80                  
+
+
+Slot 22 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 22 Column 10 Offset 0x126 Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 22 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 22 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 22 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (c85bef024756)       
+Slot 23 Offset 0x1ba8 Length 314
+
+
+Record Type = PRIMARY_RECORD        Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 314                   
+Memory Dump @0x000000F3840F5BA8
+
+
+0000000000000000:   30003200 18000000 05000000 07000000 01c05d00  0.2..............À].
+
+0000000000000014:   00000000 00140000 000c0000 0001d3c9 d1b16e62  ..............ÓÉÑ±nb
+
+0000000000000028:   4a0bd3c9 d1b16e62 4a0b0c00 00000300 92002e01  J.ÓÉÑ±nbJ..........
+
+000000000000003C:   3a014100 64006a00 75007300 74006100 62006c00  :.A.d.j.u.s.t.a.b.l.
+
+0000000000000050:   65002000 44007500 6d006200 62006500 6c006c00  e. .D.u.m.b.b.e.l.l.
+
+0000000000000064:   73002000 53006500 74002000 32007800 32003400  s. .S.e.t. .2.x.2.4.
+
+0000000000000078:   6b006700 20005100 75006900 63006b00 20004400  k.g. .Q.u.i.c.k. .D.
+
+000000000000008C:   69006100 6c004400 69006100 6c002000 73007900  i.a.l.D.i.a.l. .s.y.
+
+00000000000000A0:   73007400 65006d00 20006100 64006a00 75007300  s.t.e.m. .a.d.j.u.s.
+
+00000000000000B4:   74007300 20007700 65006900 67006800 74002000  t.s. .w.e.i.g.h.t. .
+
+00000000000000C8:   66007200 6f006d00 20003200 2e003500 6b006700  f.r.o.m. .2...5.k.g.
+
+00000000000000DC:   20007400 6f002000 32003400 6b006700 20006900   .t.o. .2.4.k.g. .i.
+
+00000000000000F0:   6e002000 73006500 63006f00 6e006400 73002c00  n. .s.e.c.o.n.d.s.,.
+
+0000000000000104:   20007300 70006100 63006500 2d007300 61007600   .s.p.a.c.e.-.s.a.v.
+
+0000000000000118:   69006e00 67002000 64006500 73006900 67006e00  i.n.g. .d.e.s.i.g.n.
+
+000000000000012C:   2e006100 63007400 69007600 6500               ..a.c.t.i.v.e.
+
+
+Slot 23 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 24                     
+
+
+Slot 23 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 5                       
+
+
+Slot 23 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 7                     
+
+
+Slot 23 Column 4 Offset 0x3e Length 84 Length (physical) 84
+
+
+name = Adjustable Dumbbells Set 2x24kg Quick Dial                        
+
+
+description = [BLOB Inline Data] Slot 23 Column 5 Offset 0x92 Length 156 Length (physical) 156
+
+
+000002F3D52C2040:   44006900 61006c00 20007300 79007300 74006500  D.i.a.l. .s.y.s.t.e.
+
+000002F3D52C2054:   6d002000 61006400 6a007500 73007400 73002000  m. .a.d.j.u.s.t.s. .
+
+000002F3D52C2068:   77006500 69006700 68007400 20006600 72006f00  w.e.i.g.h.t. .f.r.o.
+
+000002F3D52C207C:   6d002000 32002e00 35006b00 67002000 74006f00  m. .2...5.k.g. .t.o.
+
+000002F3D52C2090:   20003200 34006b00 67002000 69006e00 20007300   .2.4.k.g. .i.n. .s.
+
+000002F3D52C20A4:   65006300 6f006e00 64007300 2c002000 73007000  e.c.o.n.d.s.,. .s.p.
+
+000002F3D52C20B8:   61006300 65002d00 73006100 76006900 6e006700  a.c.e.-.s.a.v.i.n.g.
+
+000002F3D52C20CC:   20006400 65007300 69006700 6e002e00            .d.e.s.i.g.n...
+
+
+Slot 23 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = 240.00                      
+
+
+Slot 23 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 20                 
+
+
+Slot 23 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 12                  
+
+
+Slot 23 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 23 Column 10 Offset 0x12e Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 23 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 23 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-19 13:12:22.9718483                                 
+
+
+Slot 23 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (415dea877bb0)       
+Slot 24 Offset 0x1de2 Length 128
+
+
+Record Type = GHOST_DATA_RECORD     Record Attributes =  NULL_BITMAP VARIABLE_COLUMNS
+
+Record Size = 128                   
+Memory Dump @0x000000F3840F5DE2
+
+
+0000000000000000:   3c003200 1b000000 01000000 02000000 00f40100  <.2..............ô..
+
+0000000000000014:   00000000 00000000 00000000 000138a2 ac8d8c68  ..............8¢¬.h
+
+0000000000000028:   4a0b38a2 ac8d8c68 4a0b0c00 10000300 74007400  J.8¢¬.hJ.......t.t.
+
+000000000000003C:   80005400 6f007000 69006300 31002000 53006300  ..T.o.p.i.c.1. .S.c.
+
+0000000000000050:   68006500 6d006100 2d006f00 6e002d00 57007200  h.e.m.a.-.o.n.-.W.r.
+
+0000000000000064:   69007400 65002000 54006500 73007400 61006300  i.t.e. .T.e.s.t.a.c.
+
+0000000000000078:   74006900 76006500                             t.i.v.e.
+
+
+Slot 24 Column 1 Offset 0x4 Length 4 Length (physical) 4
+
+
+product_id = 27                     
+
+
+Slot 24 Column 2 Offset 0x8 Length 4 Length (physical) 4
+
+
+seller_id = 1                       
+
+
+Slot 24 Column 3 Offset 0xc Length 4 Length (physical) 4
+
+
+category_id = 2                     
+
+
+Slot 24 Column 4 Offset 0x3e Length 54 Length (physical) 54
+
+
+name = Topic1 Schema-on-Write Test  
+
+
+Slot 24 Column 5 Offset 0x0 Length 0 Length (physical) 0
+
+
+description = [NULL]                
+
+
+Slot 24 Column 6 Offset 0x10 Length 9 Length (physical) 9
+
+
+price = -5.00                       
+
+
+Slot 24 Column 7 Offset 0x19 Length 4 Length (physical) 4
+
+
+stock_quantity = 0                  
+
+
+Slot 24 Column 8 Offset 0x1d Length 4 Length (physical) 4
+
+
+sold_quantity = 0                   
+
+
+Slot 24 Column 9 Offset 0x21 Length 1 (Bit position 0)
+
+
+is_active = 1                       
+
+
+Slot 24 Column 10 Offset 0x74 Length 12 Length (physical) 12
+
+
+status = active                     
+
+
+Slot 24 Column 11 Offset 0x22 Length 8 Length (physical) 8
+
+
+created_at = 2026-11-25 16:46:07.2322616                                 
+
+
+Slot 24 Column 12 Offset 0x2a Length 8 Length (physical) 8
+
+
+updated_at = 2026-11-25 16:46:07.2322616                                 
+
+
+Slot 24 Offset 0x0 Length 0 Length (physical) 0
+
+
+KeyHashValue = (a169c408bf0c)       
+
+
+
+DBCC execution completed. If DBCC printed error messages, contact your system administrator.
+DBCC execution completed. If DBCC printed error messages, contact your system administrator.
+
+
+=== NEO4J SPACE REUSE EXPERIMENT (1,000 :T1DeleteDemo Nodes) ===
+Before Insert       : total=45457408 bytes, nodestore=1900544 bytes
+With 1,000 Nodes    : total=46080000 bytes, nodestore=1916928 bytes
+After DETACH DELETE : total=46096384 bytes, nodestore=1916928 bytes
